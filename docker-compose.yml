@@ -30,6 +30,9 @@ services:
 
   logstash:
     image: docker.elastic.co/logstash/logstash:7.9.3
+    build:
+      context: .
+      dockerfile: Dockerfile.logstash
     volumes:
       - ./logstash:/usr/share/logstash/pipeline:ro
     depends_on:
@@ -40,12 +43,8 @@ services:
     environment:
       LS_JAVA_OPTS: "-Xmx256m -Xms256m"
 
-  heartbeat_publisher:
-      build:
-        context: .
-        dockerfile: Dockerfile # Use Dockerfile.heartbeat if you named it so
-      depends_on:
-        - rabbitmq
+
+
 
 volumes:
   rabbitmq_data:
