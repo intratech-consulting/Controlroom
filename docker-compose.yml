@@ -1,16 +1,5 @@
-version: '3.7'
+version: '3.8'
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.9.3
     environment:
@@ -20,6 +9,8 @@ services:
       - "9200:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - my_shared_network
 
   kibana:
     image: docker.elastic.co/kibana/kibana:7.9.3
@@ -27,6 +18,8 @@ services:
       - "5601:5601"
     depends_on:
       - elasticsearch
+    networks:
+      - my_shared_network
 
   logstash:
     image: docker.elastic.co/logstash/logstash:7.9.3
@@ -37,15 +30,16 @@ services:
       - ./logstash:/usr/share/logstash/pipeline:ro
     depends_on:
       - elasticsearch
-      - rabbitmq
     ports:
       - "5044:5044"
     environment:
       LS_JAVA_OPTS: "-Xmx256m -Xms256m"
-
-
-
+    networks:
+      - my_shared_network
 
 volumes:
-  rabbitmq_data:
   elasticsearch_data:
+
+networks:
+  my_shared_network:
+    external: true
