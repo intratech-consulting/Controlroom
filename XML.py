@@ -49,7 +49,7 @@ try:
             print('Message sent')
         else:
             print('XML is not valid')
-        time.sleep(3)  # Wait for 2 seconds
+        time.sleep(1)  # Wait for 2 seconds
 except KeyboardInterrupt:
     # Graceful shutdown on Ctrl+C
     print("Stopping...")
