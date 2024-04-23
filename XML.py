@@ -1,11 +1,12 @@
 from lxml import etree
 import pika
 import time
+import datetime
 
 # Define your XML and XSD as strings
 heartbeat_xml = """
 <Heartbeat>
-    <Timestamp>2024-03-28T12:30:00Z</Timestamp>
+    <Timestamp>{}</Timestamp>
     <Status>Active</Status>
     <SystemName>ExampleSystem</SystemName>
 </Heartbeat>
@@ -26,17 +27,10 @@ heartbeat_xsd = """
 """
 
 # Parse the documents
-xml_doc = etree.fromstring(heartbeat_xml.encode())
 xsd_doc = etree.fromstring(heartbeat_xsd.encode())
 
 # Create a schema object
 schema = etree.XMLSchema(xsd_doc)
-
-# Validate
-if schema.validate(xml_doc):
-    print('XML is valid')
-else:
-    print('XML is not valid')
 
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost', 5672, '/', pika.PlainCredentials('user', 'password')))
 channel = connection.channel()
@@ -46,9 +40,16 @@ channel.queue_declare(queue='heartbeat_queue', durable=True )
 # Loop to send heartbeat message every two seconds
 try:
     while True:
-        channel.basic_publish(exchange='', routing_key='heartbeat_queue', body=heartbeat_xml)
-        print('Message sent')
-        time.sleep(1)  # Wait for 2 seconds
+        formatted_heartbeat_xml = heartbeat_xml.format(datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f"))
+        xml_doc = etree.fromstring(formatted_heartbeat_xml.encode())
+        # Validate
+        if schema.validate(xml_doc):
+            print('XML is valid')
+            channel.basic_publish(exchange='', routing_key='heartbeat_queue', body=formatted_heartbeat_xml)
+            print('Message sent')
+        else:
+            print('XML is not valid')
+        time.sleep(3)  # Wait for 2 seconds
 except KeyboardInterrupt:
     # Graceful shutdown on Ctrl+C
     print("Stopping...")

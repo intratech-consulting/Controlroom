@@ -32,10 +32,21 @@ services:
       - elasticsearch
     ports:
       - "5044:5044"
+      - "8080:8080"
     environment:
       LS_JAVA_OPTS: "-Xmx256m -Xms256m"
     networks:
       - my_shared_network
+
+
+    # consumer:
+    #   build:
+    #     context: .
+    #     dockerfile: Dockerfile.consumer
+    #   depends_on:
+    #     - logstash
+    #   networks:
+    #   - my_shared_network
 
 volumes:
   elasticsearch_data:
