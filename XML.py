@@ -41,12 +41,12 @@ else:
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost', 5672, '/', pika.PlainCredentials('user', 'password')))
 channel = connection.channel()
 
-channel.queue_declare(queue='XML', durable=True )
+channel.queue_declare(queue='heartbeat_queue', durable=True )
 
 # Loop to send heartbeat message every two seconds
 try:
     while True:
-        channel.basic_publish(exchange='', routing_key='XML', body=heartbeat_xml)
+        channel.basic_publish(exchange='', routing_key='heartbeat_queue', body=heartbeat_xml)
         print('Message sent')
         time.sleep(1)  # Wait for 2 seconds
 except KeyboardInterrupt:
