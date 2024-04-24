@@ -11,5 +11,5 @@ COPY . /app
 RUN pip install --trusted-host pypi.python.org pika requests
 
 # Run consumer.py when the container launches
-CMD ["python", "./consumer.py"]
+CMD sh -c "sleep 60; python consumer.py"
 

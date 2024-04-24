@@ -39,14 +39,15 @@ services:
       - my_shared_network
 
 
-    # consumer:
-    #   build:
-    #     context: .
-    #     dockerfile: Dockerfile.consumer
-    #   depends_on:
-    #     - logstash
-    #   networks:
-    #   - my_shared_network
+  consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer
+    depends_on:
+      - logstash
+    networks:
+    - my_shared_network
+
 
 volumes:
   elasticsearch_data:

@@ -45,7 +45,7 @@ def callback(ch, method, properties, body):
     print(f"Received XML: {body}\n")
     headers = {'Content-type': 'application/json'}
     dict_data = process_message(body, callback.last_message_times)
-    response = requests.post('http://localhost:8080', json=dict_data, headers=headers)
+    response = requests.post('http://logstash:8080', json=dict_data, headers=headers)
     print(f'Response Code: {response.status_code} - {response.reason} \n')
     print(f"XML to JSON: {dict_data} \n")
     print(f"------------------------------------\n")
