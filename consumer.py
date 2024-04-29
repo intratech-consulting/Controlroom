@@ -5,7 +5,14 @@ import time
 from datetime import datetime
 
 def create_connection():
-    return pika.BlockingConnection(pika.ConnectionParameters('localhost', 5672, '/', pika.PlainCredentials('user', 'password')))
+    return pika.BlockingConnection(
+        pika.ConnectionParameters(
+            'rabbitmq',  # This should match the service name in docker-compose
+            5672,
+            '/',
+            pika.PlainCredentials('user', 'password')
+        )
+    )
 
 def create_channel(connection):
     return connection.channel()
@@ -45,7 +52,7 @@ def callback(ch, method, properties, body):
     print(f"Received XML: {body}\n")
     headers = {'Content-type': 'application/json'}
     dict_data = process_message(body, callback.last_message_times)
-    response = requests.post('http://localhost:8080', json=dict_data, headers=headers)
+    response = requests.post('http://logstash:8080', json=dict_data, headers=headers)
     print(f'Response Code: {response.status_code} - {response.reason} \n')
     print(f"XML to JSON: {dict_data} \n")
     print(f"------------------------------------\n")
