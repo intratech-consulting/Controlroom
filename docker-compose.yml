@@ -49,6 +49,7 @@ services:
       - logstash
     networks:
     - my_shared_network
+    restart: always
 
 
 volumes:
