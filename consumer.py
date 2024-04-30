@@ -35,7 +35,9 @@ def process_message(body, last_message_times):
     dict_data = xml_to_dict(body.decode("utf-8"))
     system_name = dict_data.get('SystemName')
     timestamp = dict_data.get('Timestamp')
-             
+
+    dict_data['Status'] = 1 if dict_data['Status'] == "Active" else 0
+
     time_difference = calculate_time_difference(system_name, timestamp, last_message_times)
     if time_difference is not None:
         dict_data['Heartbeat-Interval'] = time_difference
@@ -73,4 +75,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
