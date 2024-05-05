@@ -1,4 +1,4 @@
-FROM docker.elastic.co/logstash/logstash:7.9.3
+FROM docker.elastic.co/logstash/logstash:8.7.1
 
 # Install Logstash plugins required
 RUN logstash-plugin install logstash-filter-xml
