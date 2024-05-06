@@ -8,7 +8,7 @@ heartbeat_xml = """
 <Heartbeat>
     <Timestamp>{}</Timestamp>
     <Status>Active</Status>
-    <SystemName>Tonto</SystemName>
+    <SystemName>tonto</SystemName>
 </Heartbeat>
 """
 

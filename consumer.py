@@ -67,23 +67,16 @@ class SystemMonitor:
         print(f"------------------------------------\n")
 
     def check_systems(self):
-     while True:
-        for system in SystemMonitor.list_of_systems:
-            if system not in SystemMonitor.last_message_times or time.time() - SystemMonitor.last_message_times[system]['time'] >= 5:
-                dict_data = {
-                    'Timestamp': datetime.now().isoformat(),  # Corrected timestamp generation
-                    'SystemName': system,
-                    'Status': 0
-                }
-                headers = {'Content-type': 'application/json'}
-                try:
+        while True:
+            for system in SystemMonitor.list_of_systems:
+                if system not in SystemMonitor.last_message_times or time.time() - SystemMonitor.last_message_times[system]['time'] >= 5:
+                    dict_data = {'Timestamp': datetime.now, 'SystemName': system, 'Status': 0}
+                    headers = {'Content-type': 'application/json'}
                     response = requests.post('http://logstash01:8080', json=dict_data, headers=headers)
                     print(f'Send System Down status: {response.status_code} - {response.reason}', f'SystemName: {system}')
-                except requests.exceptions.RequestException as e:
-                    print(f'Error sending data for {system}: {str(e)}')
-            else:
-                print('System up ->', f'SystemName: {system}')
-        time.sleep(5)
+                else:
+                    print('System up ->', f'SystemName: {system}')
+            time.sleep(5)
 
     def main(self):
         connection = self.create_connection()
