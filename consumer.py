@@ -14,7 +14,20 @@ class SystemMonitor:
         "facturatie",
         "planning",
         "mailing",
+        "inventree",
     ]
+
+    Mail_state = {
+        'crm': True,
+        'frontend': True,
+        'kassa': True,
+        'ExampleSystem': True,
+        'facturatie': True,
+        'planning': True,
+        'mailing': True,
+        'inventree': True
+    }
+    
     last_message_times = {}
     def create_connection(self):
         return pika.BlockingConnection(
@@ -47,8 +60,14 @@ class SystemMonitor:
             dict_data["Heartbeat-Interval"] = time_difference
             if time_difference >= 5:
                 dict_data["Status"] = 0
+
+                if SystemMonitor.Mail_state[system_name]:
+                    error_xml = f'<ErrorLog>\n\t<Timestamp>{datetime.now().strftime("%Y-%m-%dT%H:%M:%S")}</Timestamp>\n\t<Status>0</Status>\n\t<SystemName>{system_name}</SystemName></ErrorLog>'
+                    self.send_to_mailing(error_xml)
+                    SystemMonitor.Mail_state[system_name] = False
             else:
                 dict_data["Status"] = 1
+                SystemMonitor.Mail_state[system_name] = True
         last_message_times.setdefault(
             system_name, {"time": time.time(), "timestamp": None}
         )
@@ -104,6 +123,13 @@ class SystemMonitor:
         channel = self.create_channel(connection)
         channel.basic_publish(exchange="topic", routing_key="heartbeat", body=message)
         connection.close()
+
+    def send_to_mailing(self, message):
+        connection = self.create_connection()
+        channel = self.create_channel(connection)
+        channel.basic_publish(exchange='topic', routing_key='mailing', body=message)
+        connection.close()
+
     def main(self):
         connection = self.create_connection()
         channel = self.create_channel(connection)
