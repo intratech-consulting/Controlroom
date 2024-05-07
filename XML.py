@@ -7,7 +7,7 @@ import datetime
 heartbeat_xml = """
 <Heartbeat>
     <Timestamp>{}</Timestamp>
-    <Status>Active</Status>
+    <Status>1</Status>
     <SystemName>ExampleSystem</SystemName>
 </Heartbeat>
 """
