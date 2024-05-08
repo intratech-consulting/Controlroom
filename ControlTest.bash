@@ -10,6 +10,12 @@ cd Controlroom-Monitoring || echo "Already in Controlroom-Monitoring directory"
 echo "Installing Docker Compose if not already installed..."
 sudo apt-get update && sudo apt-get install docker-compose -y
 
+network_name="my_shared_network"
+if ! docker network ls | grep -qw $network_name; then
+  echo "Network $network_name does not exist, creating..."
+  docker network create $network_name
+fi
+
 # Start all services as defined in docker-compose.yml
 echo "Starting services defined in docker-compose..."
 docker-compose up -d
