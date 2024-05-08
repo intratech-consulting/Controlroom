@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI for Controlroom Monitoring
 
 on:
   push:
@@ -9,48 +9,32 @@ on:
       - main
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Build Docker images
-        run: docker-compose build
 
-  test:
-    runs-on: ubuntu-latest
-    needs: build
+    services:
+      rabbitmq:
+        image: rabbitmq:3-management
+        ports:
+          - 5672:5672
+          - 15672:15672
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Start services
-        run: docker-compose up -d
-      - name: Check if Elasticsearch is up
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Compose
+        run: sudo apt-get update && sudo apt-get install docker-compose -y
+
+      - name: Build Docker Images
         run: |
-          until curl -fs http://localhost:9200; do
-            echo "Waiting for Elasticsearch..."
-            sleep 5
-          done
-      - name: Check if Kibana is up
+          docker-compose -f docker-compose.yml build
+
+      - name: Start Services
+        run: docker-compose -f docker-compose.yml up -d
+
+      - name: Run Tests
         run: |
-          until curl -fs http://localhost:5601; do
-            echo "Waiting for Kibana..."
-            sleep 5
-          done
-      - name: Check if Logstash is up
-        run: |
-          until curl -fs http://localhost:9600; do
-            echo "Waiting for Logstash..."
-            sleep 5
-          done
-      - name: Run integration tests
-        run: echo "Run your integration tests here"
-      - name: Clean up
+          sudo bash ./test-consumer.py  # Assuming this is your test script
+
+      - name: Shutdown
         run: docker-compose down
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v2
-      - name: Deploy to Production
-        run: echo "Deploying to production server"
