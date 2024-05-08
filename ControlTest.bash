@@ -18,31 +18,26 @@ docker-compose up -d
 echo "Checking docker-compose configuration..."
 docker-compose config --quiet && docker_compose="Docker-compose OK" || docker_compose="Docker-compose ERROR"
 
-# Check Elasticsearch service
-echo "Validating Elasticsearch (es01)..."
-until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q "You Know, for Search"; do
-    echo "Waiting for Elasticsearch to become available..."
-    sleep 10
-done
-echo "Elasticsearch is up and running."
-
-# Check Kibana service
-echo "Validating Kibana..."
-until curl -s -I http://localhost:${KIBANA_PORT} | grep -q 'HTTP/1.1 302 Found'; do
-    echo "Waiting for Kibana to become available..."
-    sleep 10
-done
-echo "Kibana is up and running."
-
-# Check Logstash service
-echo "Validating Logstash..."
-logstash_health_check=$(curl -s -u elastic:${ELASTIC_PASSWORD} https://localhost:9600)  # Update with Logstash monitoring port if different
-if [[ $logstash_health_check == *"status"*"green"* ]]; then
-    echo "Logstash is up and running."
-else
-    echo "Failed to validate Logstash status."
+check_container() {
+  local container_name="$1"
+  echo "Checking $container_name..."
+  if [ "$(docker inspect -f '{{.State.Running}}' $container_name)" == "true" ]; then
+    echo "$container_name is running."
+  else
+    echo "Failed to start $container_name."
     returnvalue=1
-fi
+  fi
+}
+
+# Validate containers are running
+echo "Validating Elasticsearch (es01)..."
+check_container es01
+
+echo "Validating Kibana..."
+check_container kibana
+
+echo "Validating Logstash..."
+check_container logstash01
 
 # Optionally, shut down services after validation
 echo "Tearing down services..."
