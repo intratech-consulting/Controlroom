@@ -29,12 +29,10 @@ jobs:
         run: |
           docker-compose -f docker-compose.yml build
 
-      - name: Start Services
-        run: docker-compose -f docker-compose.yml up -d
-
-      - name: Run Tests
+      - name: Start Services and Run ControlTest.bash
         run: |
-          sudo bash ./test-consumer.py  # Assuming this is your test script
+          chmod +x ControlTest.bash
+          sudo ./ControlTest.bash
 
       - name: Shutdown
         run: docker-compose down
