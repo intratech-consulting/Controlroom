@@ -1,6 +1,6 @@
 name: Deploy to Dev
 
-# test staging Workflow
+# Test staging Workflow
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to Production
+    name: Deploy to Dev
     runs-on: [self-hosted]
     environment: dev
     env:
@@ -40,10 +40,11 @@ jobs:
           check_image() {
             local image=$1
             local tag=$2
+            local output_name=$(echo $image | sed 's/[^a-zA-Z0-9]/_/g')
             if docker image inspect $image:$tag &> /dev/null; then
-              echo \"::set-output name=${image//[^[:alnum:]]/_}_exists::true\"
+              echo \"::set-output name=${output_name}_exists::true\"
             else
-              echo \"::set-output name=${image//[^[:alnum:]]/_}_exists::false\"
+              echo \"::set-output name=${output_name}_exists::false\"
             fi
           }
           check_image 'docker.elastic.co/kibana/kibana' '8.7.1'
@@ -74,15 +75,16 @@ jobs:
             local image=$1
             local tag=$2
             local path=$3
-            if [[ \"${{ steps.check_latest_images.outputs.${image//[^[:alnum:]]/_}_exists }}\" == 'false' ]]; then
+            local output_name=$(echo $image | sed 's/[^a-zA-Z0-9]/_/g')
+            if [[ \"${{ steps.check_latest_images.outputs.${output_name}_exists }}\" == 'false' ]]; then
               cd $path && \
               docker pull $image:$tag && \
               docker compose up -d
             fi
           }
-          deploy_image 'docker.elastic.co/kibana/kibana' '8.7.1' ~/production/path/to/kibana
-          deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1' ~/production/path/to/elasticsearch
-          deploy_image 'docker.elastic.co/logstash/logstash' '8.7.1' ~/production/path/to/logstash"
+          deploy_image 'docker.elastic.co/kibana/kibana' '8.7.1' '~/production/path/to/kibana'
+          deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1' '~/production/path/to/elasticsearch'
+          deploy_image 'docker.elastic.co/logstash/logstash' '8.7.1' '~/production/path/to/logstash'"
 
       - name: Check deployment status
         id: check_status
@@ -91,7 +93,6 @@ jobs:
           echo "Checking deployment status..."
           services=("controlroom-monitoring-consumer" "controlroom-monitoring-logstash01" "controlroom-monitoring-kibana" "controlroom-monitoring-es01")
           all_good=true
-
           for service in "${services[@]}"; do
             if ! docker ps | grep "$service" > /dev/null; then
               echo "$service is not running."
@@ -101,7 +102,6 @@ jobs:
               echo "$service is running."
             fi
           done
-
           if [ "$all_good" = false ]; then
             exit 1
           else
@@ -121,7 +121,6 @@ jobs:
             docker-compose -f ~/production/path/to/$service/docker-compose.yml down
             docker run -d --name $service $backup_image
           }
-
           rollback_service "controlroom-monitoring-consumer" "controlroom-monitoring-consumer:backup"
           rollback_service "controlroom-monitoring-logstash01" "docker.elastic.co/logstash/logstash:backup"
           rollback_service "controlroom-monitoring-kibana" "docker.elastic.co/kibana/kibana:backup"
