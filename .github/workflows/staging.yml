@@ -46,10 +46,10 @@ jobs:
               echo \"::set-output name=${image//[^[:alnum:]]/_}_exists::false\"
             fi
           }
-          check_image docker.elastic.co/kibana/kibana 8.7.1
-          check_image docker.elastic.co/elasticsearch/elasticsearch 8.7.1
-          check_image docker.elastic.co/logstash/logstash 8.7.1
-          check_image controlroom-monitoring-consumer latest"
+          check_image 'docker.elastic.co/kibana/kibana' '8.7.1'
+          check_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1'
+          check_image 'docker.elastic.co/logstash/logstash' '8.7.1'
+          check_image 'controlroom-monitoring-consumer' 'latest'"
 
       - name: Backup previous state
         run: |
@@ -80,9 +80,9 @@ jobs:
               docker compose up -d
             fi
           }
-          deploy_image docker.elastic.co/kibana/kibana 8.7.1 ~/production/path/to/kibana
-          deploy_image docker.elastic.co/elasticsearch/elasticsearch 8.7.1 ~/production/path/to/elasticsearch
-          deploy_image docker.elastic.co/logstash/logstash 8.7.1 ~/production/path/to/logstash"
+          deploy_image 'docker.elastic.co/kibana/kibana' '8.7.1' ~/production/path/to/kibana
+          deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1' ~/production/path/to/elasticsearch
+          deploy_image 'docker.elastic.co/logstash/logstash' '8.7.1' ~/production/path/to/logstash"
 
       - name: Check deployment status
         id: check_status
