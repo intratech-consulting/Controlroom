@@ -80,7 +80,7 @@ class SystemMonitor:
         headers = {"Content-type": "application/json"}
         dict_data = self.process_message(body, SystemMonitor.last_message_times)
         response = requests.post(
-            "http://logstash01:8090", json=dict_data, headers=headers
+            "http://logstash01:8095", json=dict_data, headers=headers
         )
         print(f"Response Code: {response.status_code} - {response.reason} \n")
         print(f"XML to JSON: {dict_data} \n")
@@ -106,7 +106,7 @@ class SystemMonitor:
                     }
                     headers = {"Content-type": "application/json"}
                     response = requests.post(
-                        "http://logstash01:8090", json=dict_data, headers=headers
+                        "http://logstash01:8095", json=dict_data, headers=headers
                     )
                     print(
                         f"Send System Down status: {response.status_code} - {response.reason}",
