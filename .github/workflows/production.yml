@@ -1,7 +1,4 @@
 name: Deploy to Production
-name: Deploy to Production
-
-# Test staging Workflow new ip
 
 on:
   push:
@@ -28,34 +25,27 @@ jobs:
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
           sudo apt-get install sshpass
 
-      - name: Print SSH config
-        run: cat ~/.ssh/config
-      - name: Print SSH config
-        run: cat ~/.ssh/config
-
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Test SSH Connection
+        run: |
+            ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
+          
+      
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Check if latest images exist
         id: check_latest_images
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
-          check_image() {
-            local image=$1
-            local tag=$2
-            local output_name=$(echo $image | sed 's/[^a-zA-Z0-9]/_/g')
-            if docker image inspect $image:$tag &> /dev/null; then
-              echo \"::set-output name=${output_name}_exists::true\"
+          declare -a images=("docker.elastic.co/kibana/kibana:8.7.1" "docker.elastic.co/elasticsearch/elasticsearch:8.7.1" "docker.elastic.co/logstash/logstash:8.7.1")
+          for image in "${images[@]}"; do
+            image_key=$(echo "${image}" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
+            if docker image inspect "$image" &> /dev/null; then
+              echo "::set-output name=${image_key}_exists::true"
             else
-              echo \"::set-output name=${output_name}_exists::false\"
+              echo "::set-output name=${image_key}_exists::false"
             fi
-          }
-          check_image 'docker.elastic.co/kibana/kibana' '8.7.1'
-          check_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1'
-          check_image 'docker.elastic.co/logstash/logstash' '8.7.1'
-          check_image 'controlroom-monitoring-consumer' 'latest'"
+          done
+      
 
       - name: Backup previous state
         run: |
@@ -75,21 +65,28 @@ jobs:
 
       - name: Deploy new versions of Images
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
-          deploy_image() {
-            local image=$1
-            local tag=$2
-            local path=$3
-            local output_name=$(echo $image | sed 's/[^a-zA-Z0-9]/_/g')
-            if [[ \"${{ steps.check_latest_images.outputs.${output_name}_exists }}\" == 'false' ]]; then
-              cd $path && \
-              docker pull $image:$tag && \
-              docker compose up -d
-            fi
-          }
-          deploy_image 'docker.elastic.co/kibana/kibana' '8.7.1' '~/production/path/to/kibana'
-          deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1' '~/production/path/to/elasticsearch'
-          deploy_image 'docker.elastic.co/logstash/logstash' '8.7.1' '~/production/path/to/logstash'"
+            ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+            deploy_image() {
+              local image=$1
+              local tag=$2
+              local path=$3
+              local image_key=\$(echo \"$image\" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
+              echo \"Checking deployment status for \$image_key...\"
+              if [[ \"\$4\" == 'false' ]]; then
+                echo \"Deploying \${image}...\"
+                cd \"\$path\" && \
+                docker pull \"\$image:\$tag\" && \
+                docker compose up -d
+              else
+                echo \"\${image} already exists. Skipping deployment.\"
+              fi
+            }
+            deploy_image 'docker.elastic.co/kibana/kibana' '8.7.1' '~/production/path/to/kibana' \"${{ steps.check_latest_images.outputs.kibana_exists }}\"
+            deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1' '~/production/path/to/elasticsearch' \"${{ steps.check_latest_images.outputs.elasticsearch_exists }}\"
+            deploy_image 'docker.elastic.co/logstash/logstash' '8.7.1' '~/production/path/to/logstash' \"${{ steps.check_latest_images.outputs.logstash_exists }}\""
+        
+        
+        
 
       - name: Check deployment status
         id: check_status
@@ -98,6 +95,7 @@ jobs:
           echo "Checking deployment status..."
           services=("controlroom-monitoring-consumer" "controlroom-monitoring-logstash01" "controlroom-monitoring-kibana" "controlroom-monitoring-es01")
           all_good=true
+
           for service in "${services[@]}"; do
             if ! docker ps | grep "$service" > /dev/null; then
               echo "$service is not running."
@@ -107,6 +105,7 @@ jobs:
               echo "$service is running."
             fi
           done
+
           if [ "$all_good" = false ]; then
             exit 1
           else
@@ -126,6 +125,7 @@ jobs:
             docker-compose -f ~/production/path/to/$service/docker-compose.yml down
             docker run -d --name $service $backup_image
           }
+
           rollback_service "controlroom-monitoring-consumer" "controlroom-monitoring-consumer:backup"
           rollback_service "controlroom-monitoring-logstash01" "docker.elastic.co/logstash/logstash:backup"
           rollback_service "controlroom-monitoring-kibana" "docker.elastic.co/kibana/kibana:backup"
