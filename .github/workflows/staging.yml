@@ -33,10 +33,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check if latest images exist
+      - name: Check if latest profiles exist
         id: check_latest_images
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
           check_image() {
             local image=$1
             local tag=$2
@@ -51,6 +51,7 @@ jobs:
           check_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1'
           check_image 'docker.elastic.co/logstash/logstash' '8.7.1'
           check_image 'controlroom-monitoring-consumer' 'latest'"
+
 
       - name: Backup previous state
         run: |
