@@ -55,7 +55,7 @@ jobs:
           ENDSSH
       
 
-      # - name: Backup previous state
+      # - name: Backup previous state testing other ip
       #   if: steps.check_latest_image.outputs.image_exists == 'true'
       #   run: |
       #     sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -v -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
