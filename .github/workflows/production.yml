@@ -46,7 +46,7 @@ jobs:
             fi
           done
       
-
+# to backup the previous state of images:
       - name: Backup previous state
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
