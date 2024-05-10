@@ -1,4 +1,5 @@
 name: Deploy to Production
+name: Deploy to Production
 
 # Test staging Workflow new ip
 
@@ -29,7 +30,11 @@ jobs:
 
       - name: Print SSH config
         run: cat ~/.ssh/config
+      - name: Print SSH config
+        run: cat ~/.ssh/config
 
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Checkout code
         uses: actions/checkout@v4
 
