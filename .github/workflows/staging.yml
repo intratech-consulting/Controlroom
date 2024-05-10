@@ -29,8 +29,6 @@ jobs:
         run: |
             ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
           
-      - name: Print SSH config
-        run: cat ~/.ssh/config
       
       - name: Checkout code
         uses: actions/checkout@v4
