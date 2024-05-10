@@ -68,23 +68,23 @@ jobs:
           backup_image docker.elastic.co/elasticsearch/elasticsearch 8.7.1 backup
           backup_image docker.elastic.co/logstash/logstash 8.7.1 backup"
 
-      - name: Deploy new versions of Images
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
-          deploy_image() {
-            local image=$1
-            local tag=$2
-            local path=$3
-            local output_name=$(echo $image | sed 's/[^a-zA-Z0-9]/_/g')
-            if [[ \"${{ steps.check_latest_images.outputs.${output_name}_exists }}\" == 'false' ]]; then
-              cd $path && \
-              docker pull $image:$tag && \
-              docker compose up -d
-            fi
-          }
-          deploy_image 'docker.elastic.co/kibana/kibana' '8.7.1' '~/production/path/to/kibana'
-          deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1' '~/production/path/to/elasticsearch'
-          deploy_image 'docker.elastic.co/logstash/logstash' '8.7.1' '~/production/path/to/logstash'"
+      # - name: Deploy new versions of Images
+      #   run: |
+      #     ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+      #     deploy_image() {
+      #       local image=$1
+      #       local tag=$2
+      #       local path=$3
+      #       local output_name=$(echo $image | sed 's/[^a-zA-Z0-9]/_/g')
+      #       if [[ \"${{ steps.check_latest_images.outputs.${output_name}_exists }}\" == 'false' ]]; then
+      #         cd $path && \
+      #         docker pull $image:$tag && \
+      #         docker compose up -d
+      #       fi
+      #     }
+      #     deploy_image 'docker.elastic.co/kibana/kibana' '8.7.1' '~/production/path/to/kibana'
+      #     deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1' '~/production/path/to/elasticsearch'
+      #     deploy_image 'docker.elastic.co/logstash/logstash' '8.7.1' '~/production/path/to/logstash'"
 
       - name: Check deployment status
         id: check_status
