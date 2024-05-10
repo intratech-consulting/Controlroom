@@ -19,11 +19,16 @@ jobs:
     steps:
       - name: Configure SSH
         run: |
-          mkdir -p ~/.ssh/
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
-          chmod 600 ~/.ssh/deployment.key
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-          sudo apt-get install sshpass
+         mkdir -p ~/.ssh/
+         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+         chmod 600 ~/.ssh/id_rsa
+         ssh-keyscan -H ${{ secrets.SSSH_HOST }} >> ~/.ssh/known_hosts
+         echo "Host *
+          HostName ${{ secrets.SSH_HOST }}
+          User ${{ secrets.SSH_USER }}
+          IdentityFile ~/.ssh/id_rsa
+          StrictHostKeyChecking no" > ~/.ssh/config
+         chmod 600 ~/.ssh/config
 
       - name: Print SSH config
         run: cat ~/.ssh/config
