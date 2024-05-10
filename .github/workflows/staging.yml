@@ -27,7 +27,7 @@ jobs:
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
           sudo apt-get install sshpass
 
-      # - name: Print SSH config
+      # - name: Print SSH config + private key update
       #   run: cat ~/.ssh/config
 
       - name: Checkout code
