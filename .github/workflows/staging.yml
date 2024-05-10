@@ -29,6 +29,7 @@ jobs:
 
       # - name: Print SSH config
       #   run: cat ~/.ssh/config
+      # test new secrets
 
       - name: Checkout code
         uses: actions/checkout@v4
