@@ -47,21 +47,21 @@ jobs:
           done
       
 
-      - name: Backup previous state
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
-          backup_image() {
-            local image=$1
-            local tag=$2
-            local backup_tag=$3
-            if docker image inspect $image:$tag &> /dev/null; then
-              cd ~/production/path/to/$image && \
-              docker tag $image:$tag $image:$backup_tag
-            fi
-          }
-          backup_image docker.elastic.co/kibana/kibana 8.7.1 backup
-          backup_image docker.elastic.co/elasticsearch/elasticsearch 8.7.1 backup
-          backup_image docker.elastic.co/logstash/logstash 8.7.1 backup"
+      # - name: Backup previous state
+      #   run: |
+      #     ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+      #     backup_image() {
+      #       local image=$1
+      #       local tag=$2
+      #       local backup_tag=$3
+      #       if docker image inspect $image:$tag &> /dev/null; then
+      #         cd ~/production/path/to/$image && \
+      #         docker tag $image:$tag $image:$backup_tag
+      #       fi
+      #     }
+      #     backup_image docker.elastic.co/kibana/kibana 8.7.1 backup
+      #     backup_image docker.elastic.co/elasticsearch/elasticsearch 8.7.1 backup
+      #     backup_image docker.elastic.co/logstash/logstash 8.7.1 backup"
 
       - name: Deploy new versions of Images
         run: |
