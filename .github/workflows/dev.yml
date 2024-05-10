@@ -1,0 +1,134 @@
+name: Deploy to Dev
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    name: Deploy to Dev
+    runs-on: [self-hosted]
+    environment: dev
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          sudo apt-get install sshpass
+
+      - name: Test SSH Connection
+        run: |
+            ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
+          
+      
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if latest images exist
+        id: check_latest_images
+        run: |
+          declare -a images=("docker.elastic.co/kibana/kibana:8.13.3" "docker.elastic.co/elasticsearch/elasticsearch:8.13.3" "docker.elastic.co/logstash/logstash:8.13.3")
+          for image in "${images[@]}"; do
+            image_key=$(echo "${image}" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
+            if docker image inspect "$image" &> /dev/null; then
+              echo "::set-output name=${image_key}_exists::true"
+            else
+              echo "::set-output name=${image_key}_exists::false"
+            fi
+          done
+      
+
+      - name: Backup previous state
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+          backup_image() {
+            local image=$1
+            local tag=$2
+            local backup_tag=$3
+            if docker image inspect $image:$tag &> /dev/null; then
+              cd ~/production/path/to/$image && \
+              docker tag $image:$tag $image:$backup_tag
+            fi
+          }
+          backup_image docker.elastic.co/kibana/kibana 8.13.3 backup
+          backup_image docker.elastic.co/elasticsearch/elasticsearch 8.13.3 backup
+          backup_image docker.elastic.co/logstash/logstash 8.13.3 backup"
+
+      - name: Deploy new versions of Images
+        run: |
+            ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+            deploy_image() {
+              local image=$1
+              local tag=$2
+              local path=$3
+              local image_key=\$(echo \"$image\" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
+              echo \"Checking deployment status for \$image_key...\"
+              if [[ \"\$4\" == 'false' ]]; then
+                echo \"Deploying \${image}...\"
+                cd \"\$path\" && \
+                docker pull \"\$image:\$tag\" && \
+                docker compose up -d
+              else
+                echo \"\${image} already exists. Skipping deployment.\"
+              fi
+            }
+            deploy_image 'docker.elastic.co/kibana/kibana' '8.13.3' '~/production/path/to/kibana' \"${{ steps.check_latest_images.outputs.kibana_exists }}\"
+            deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.13.3' '~/production/path/to/elasticsearch' \"${{ steps.check_latest_images.outputs.elasticsearch_exists }}\"
+            deploy_image 'docker.elastic.co/logstash/logstash' '8.13.3' '~/production/path/to/logstash' \"${{ steps.check_latest_images.outputs.logstash_exists }}\""
+        
+        
+        
+
+      - name: Check deployment status
+        id: check_status
+        run: |
+          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -v -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
+          echo "Checking deployment status..."
+          services=("controlroom-monitoring-consumer" "controlroom-monitoring-logstash01" "controlroom-monitoring-kibana" "controlroom-monitoring-es01")
+          all_good=true
+
+          for service in "${services[@]}"; do
+            if ! docker ps | grep "$service" > /dev/null; then
+              echo "$service is not running."
+              all_good=false
+              break
+            else
+              echo "$service is running."
+            fi
+          done
+
+          if [ "$all_good" = false ]; then
+            exit 1
+          else
+            echo "All services are up and running."
+          fi
+          ENDSSH
+
+      - name: Rollback on failure
+        if: steps.check_status.outcome != 'success'
+        run: |
+          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -v -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
+          echo "Starting rollback procedure..."
+          rollback_service() {
+            local service=$1
+            local backup_image=$2
+            echo "Rolling back $service..."
+            docker-compose -f ~/production/path/to/$service/docker-compose.yml down
+            docker run -d --name $service $backup_image
+          }
+
+          rollback_service "controlroom-monitoring-consumer" "controlroom-monitoring-consumer:backup"
+          rollback_service "controlroom-monitoring-logstash01" "docker.elastic.co/logstash/logstash:backup"
+          rollback_service "controlroom-monitoring-kibana" "docker.elastic.co/kibana/kibana:backup"
+          rollback_service "controlroom-monitoring-es01" "docker.elastic.co/elasticsearch/elasticsearch:backup"
+          echo "Rollback completed."
+          ENDSSH
