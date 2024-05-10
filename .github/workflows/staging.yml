@@ -63,27 +63,27 @@ jobs:
       #     backup_image docker.elastic.co/elasticsearch/elasticsearch 8.7.1 backup
       #     backup_image docker.elastic.co/logstash/logstash 8.7.1 backup"
 
-      - name: Deploy new versions of Images
-        run: |
-            ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
-            deploy_image() {
-              local image=$1
-              local tag=$2
-              local path=$3
-              local image_key=\$(echo \"$image\" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
-              echo \"Checking deployment status for \$image_key...\"
-              if [[ \"\$4\" == 'false' ]]; then
-                echo \"Deploying \${image}...\"
-                cd \"\$path\" && \
-                docker pull \"\$image:\$tag\" && \
-                docker compose up -d
-              else
-                echo \"\${image} already exists. Skipping deployment.\"
-              fi
-            }
-            deploy_image 'docker.elastic.co/kibana/kibana' '8.7.1' '~/production/path/to/kibana' \"${{ steps.check_latest_images.outputs.kibana_exists }}\"
-            deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1' '~/production/path/to/elasticsearch' \"${{ steps.check_latest_images.outputs.elasticsearch_exists }}\"
-            deploy_image 'docker.elastic.co/logstash/logstash' '8.7.1' '~/production/path/to/logstash' \"${{ steps.check_latest_images.outputs.logstash_exists }}\""
+      # - name: Deploy new versions of Images
+      #   run: |
+      #       ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+      #       deploy_image() {
+      #         local image=$1
+      #         local tag=$2
+      #         local path=$3
+      #         local image_key=\$(echo \"$image\" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
+      #         echo \"Checking deployment status for \$image_key...\"
+      #         if [[ \"\$4\" == 'false' ]]; then
+      #           echo \"Deploying \${image}...\"
+      #           cd \"\$path\" && \
+      #           docker pull \"\$image:\$tag\" && \
+      #           docker compose up -d
+      #         else
+      #           echo \"\${image} already exists. Skipping deployment.\"
+      #         fi
+      #       }
+      #       deploy_image 'docker.elastic.co/kibana/kibana' '8.7.1' '~/production/path/to/kibana' \"${{ steps.check_latest_images.outputs.kibana_exists }}\"
+      #       deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.7.1' '~/production/path/to/elasticsearch' \"${{ steps.check_latest_images.outputs.elasticsearch_exists }}\"
+      #       deploy_image 'docker.elastic.co/logstash/logstash' '8.7.1' '~/production/path/to/logstash' \"${{ steps.check_latest_images.outputs.logstash_exists }}\""
         
         
         
