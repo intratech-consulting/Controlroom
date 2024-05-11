@@ -3,6 +3,8 @@ import time
 from datetime import datetime
 import logging
 import sys
+from MessageProcessor import MessageProcessor
+
 
 logging.basicConfig(
     stream=sys.stdout,
@@ -16,7 +18,29 @@ class HeartbeatChecker:
         self.last_heartbeat = {system: None for system in list_of_systems}
         self.system_state = {system: True for system in list_of_systems}
         self.system_down_time = {system: None for system in list_of_systems}  # Store the time when a system went down
-    
+        self.xml_data = """
+        <Heartbeat>
+            <Timestamp>{timestamp}</Timestamp>
+            <Status>Inactive</Status>
+            <SystemName>{system_name}</SystemName>
+        </Heartbeat>
+        """
+        
+        self.xsd_data = """
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+            <xs:element name="Heartbeat">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Timestamp" type="xs:dateTime" />
+                        <xs:element name="Status" type="xs:string" />
+                        <xs:element name="SystemName" type="xs:string" />
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:schema>
+        """
+        # Initialize the MessageProcessor
+        self.message_processor = MessageProcessor()
     
     def start_monitoring(self):
         self.monitoring_thread = threading.Thread(target=self.run_monitoring)
@@ -36,7 +60,7 @@ class HeartbeatChecker:
         current_time = time.time()
 
         # Convert current time to string just for logging
-        time_string = datetime.utcfromtimestamp(current_time).isoformat() + 'Z'
+        # current_time = datetime.utcfromtimestamp(unfromatted_time).isoformat() + 'Z'
         logging.error("\n\n\n\n\n\n\n\n\n\nchecking systems\n\n\n\n\n\n\n\n\n\n")
         
         for system_name in self.last_heartbeat.keys():
@@ -46,6 +70,9 @@ class HeartbeatChecker:
                 if interval >= 5 and self.system_state[system_name] is not False:
                     self.system_state[system_name] = False  # Mark the system as inactive due to timeout
                     logging.error(f"\n\n\n\n\n\n\n\n\n\System {system_name} marked inactive due to no heartbeat for 5 seconds.n\n\n\n\n\n\n\n\n\n\n")
+                    timestamp = datetime.utcfromtimestamp(current_time).isoformat()
+                    formatted_xml_data = self.xml_data.format(timestamp=timestamp, system_name=system_name)
+                    self.message_processor.validate_and_send_xml(formatted_xml_data, self.xsd_data)
             elif self.last_heartbeat[system_name] is None:
                 self.system_state[system_name] = None  # Still no heartbeat received
 
@@ -66,16 +93,16 @@ class HeartbeatChecker:
                     return False, interval
                 else:
                     if self.system_down_time[system_name] is not None:
-                        downtime = current_time - self.system_down_time[system_name]
+                        downtime = self.last_heartbeat[system_name] - self.system_down_time[system_name]
                     else:
-                        downtime = 0  # Treat as no downtime recorded yet
+                        downtime = interval  # Treat as no downtime recorded yet
                         
-                    if downtime > 1:  # Check if downtime criteria are met
-                        self.last_heartbeat[system_name] = current_time
-                        self.system_state[system_name] = None
-                        self.system_down_time[system_name] = None
-                        return True, -1  # Indicating a reset
-                    return False, downtime
+
+                    self.last_heartbeat[system_name] = current_time
+                    self.system_state[system_name] = True
+                    self.system_down_time[system_name] = None
+                    return False, downtime  # Indicating a reset
+
             else:
                 # If interval < 5 seconds, and system was previously inactive
                 if not self.system_state[system_name]:
@@ -93,4 +120,3 @@ class HeartbeatChecker:
                 
         self.last_heartbeat[system_name] = current_time
         return True, interval
-

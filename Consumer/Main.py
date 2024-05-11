@@ -35,9 +35,9 @@ class SystemMonitor:
 
         self.send_to_logstash(json_data)
 
-        if not is_active:
-            error_xml = f'<ErrorLog><Timestamp>{current_time}</Timestamp><SystemName>{system_data["SystemName"]}</SystemName><Status>Down</Status><Interval>{interval}</Interval></ErrorLog>'
-            self.connection_manager.send_xml_to_rabbitmq('mailing', system_data["SystemName"], error_xml)
+        # if not is_active:
+        #     error_xml = f'<ErrorLog><Timestamp>{current_time}</Timestamp><SystemName>{system_data["SystemName"]}</SystemName><Status>Down</Status><Interval>{interval}</Interval></ErrorLog>'
+        #     self.connection_manager.send_xml_to_rabbitmq('mailing', system_data["SystemName"], error_xml)
 
     def consume_heartbeat_messages(self):
         connection = self.connection_manager.create_connection()
