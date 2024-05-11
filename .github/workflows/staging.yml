@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - staging
-# testing staging workflow
+
 jobs:
   deploy:
     name: Deploy to Staging
@@ -44,46 +44,45 @@ jobs:
               echo "::set-output name=${image_key}_exists::false"
             fi
           done
-      
 
-      # - name: Backup previous state
-      #   run: |
-      #     ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
-      #     cd ~/staging/Controlroom && \
-      #     backup_image() {
-      #       local image=$1
-      #       local tag=$2
-      #       local backup_tag=$3
-      #       if docker image inspect $image:$tag &> /dev/null; then
-      #         docker tag $image:$tag $image:$backup_tag
-      #       fi
-      #     }
-      #     backup_image docker.elastic.co/kibana/kibana 8.13.3 backup
-      #     backup_image docker.elastic.co/elasticsearch/elasticsearch 8.13.3 backup
-      #     backup_image docker.elastic.co/logstash/logstash 8.13.3 backup"
+      - name: Backup previous state
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+          cd ~/staging/Controlroom && \
+          backup_image() {
+            local image=$1
+            local tag=$2
+            local backup_tag=$3
+            if docker image inspect $image:$tag &> /dev/null; then
+              docker tag $image:$tag $image:$backup_tag
+            fi
+          }
+          backup_image 'controlroom-kibana' 'latest' 'backup'
+          backup_image 'controlroom-elasticsearch' 'latest' 'backup'
+          backup_image 'controlroom-logstash' 'latest' 'backup'"
 
-      # - name: Deploy new versions of Images
-      #   run: |
-      #     ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
-      #     cd ~/staging/Controlroom && \
-      #     deploy_image() {
-      #       local image=$1
-      #       local tag=$2
-      #       local path=$3
-      #       local image_key=\$(echo \"$image\" | sed 's/[^[:alnum:]]/_/g')
-      #       echo \"Checking deployment status for \$image_key...\"
-      #       if [[ \"\$4\" == 'false' ]]; then
-      #         echo \"Deploying \${image}...\"
-      #         cd \"\$path\" && \
-      #         docker pull \"\$image:\$tag\" && \
-      #         docker compose up -d
-      #       else
-      #         echo \"\${image} already exists. Skipping deployment.\"
-      #       fi
-      #     }
-      #     deploy_image 'docker.elastic.co/kibana/kibana' '8.13.3' './kibana' \"${{ steps.check_latest_images.outputs.kibana_exists }}\"
-      #     deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.13.3' './elasticsearch' \"${{ steps.check_latest_images.outputs.elasticsearch_exists }}\"
-      #     deploy_image 'docker.elastic.co/logstash/logstash' '8.13.3' './logstash' \"${{ steps.check_latest_images.outputs.logstash_exists }}\""
+      - name: Deploy new versions of Images
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+          cd ~/staging/Controlroom && \
+          deploy_image() {
+            local image=$1
+            local tag=$2
+            local path=$3
+            local image_key=\$(echo \"$image\" | sed 's/[^[:alnum:]]/_/g')
+            echo \"Checking deployment status for \$image_key...\"
+            if [[ \"\$4\" == 'false' ]]; then
+              echo \"Deploying \${image}...\"
+              cd \"\$path\" && \
+              docker pull \"\$image:\$tag\" && \
+              docker compose up -d
+            else
+              echo \"\${image} already exists. Skipping deployment.\"
+            fi
+          }
+          deploy_image 'controlroom-kibana' 'latest' './kibana' \"${{ steps.check_latest_images.outputs.controlroom_kibana_latest_exists }}\"
+          deploy_image 'controlroom-elasticsearch' 'latest' './elasticsearch' \"${{ steps.check_latest_images.outputs.controlroom_elasticsearch_latest_exists }}\"
+          deploy_image 'controlroom-logstash' 'latest' './logstash' \"${{ steps.check_latest_images.outputs.controlroom_logstash_latest_exists }}\""
 
       - name: Check deployment status
         id: check_status
@@ -124,8 +123,8 @@ jobs:
           }
 
           rollback_service "controlroom-monitoring-consumer" "controlroom-monitoring-consumer:backup"
-          rollback_service "controlroom-monitoring-logstash01" "docker.elastic.co/logstash/logstash:backup"
-          rollback_service "controlroom-monitoring-kibana" "docker.elastic.co/kibana/kibana:backup"
-          rollback_service "controlroom-monitoring-es01" "docker.elastic.co/elasticsearch/elasticsearch:backup"
+          rollback_service "controlroom-monitoring-logstash01" "controlroom-logstash:backup"
+          rollback_service "controlroom-monitoring-kibana" "controlroom-kibana:backup"
+          rollback_service "controlroom-monitoring-es01" "controlroom-elasticsearch:backup"
           echo "Rollback completed."
           ENDSSH
