@@ -6,6 +6,7 @@ import sys
 from MessageProcessor import MessageProcessor
 
 
+
 logging.basicConfig(
     stream=sys.stdout,
     level=logging.DEBUG,  # You can adjust the level to INFO or ERROR as needed
@@ -14,10 +15,11 @@ logging.basicConfig(
 
 
 class HeartbeatChecker:
-    def __init__(self, list_of_systems):
+    def __init__(self, list_of_systems, monitor):
         self.last_heartbeat = {system: None for system in list_of_systems}
         self.system_state = {system: True for system in list_of_systems}
         self.system_down_time = {system: None for system in list_of_systems}  # Store the time when a system went down
+        self.system_monitor = monitor
         self.xml_data = """
         <Heartbeat>
             <Timestamp>{timestamp}</Timestamp>
@@ -73,6 +75,14 @@ class HeartbeatChecker:
                     timestamp = datetime.utcfromtimestamp(current_time).isoformat()
                     formatted_xml_data = self.xml_data.format(timestamp=timestamp, system_name=system_name)
                     self.message_processor.validate_and_send_xml(formatted_xml_data, self.xsd_data)
+                    json_data = {
+                        "Timestamp": timestamp,
+                        "SystemName": system_name,
+                        "Status": "Down",
+                        "Heartbeat-Interval": interval
+                    }
+                    self.system_monitor.send_to_logstash(json_data)
+
             elif self.last_heartbeat[system_name] is None:
                 self.system_state[system_name] = None  # Still no heartbeat received
 

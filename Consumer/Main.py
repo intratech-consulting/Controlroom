@@ -5,17 +5,19 @@ import requests
 from ConnectionManager import ConnectionManager
 from MessageProcessor import MessageProcessor
 from HeartbeatChecker import HeartbeatChecker
+import logging
 
 class SystemMonitor:
     def __init__(self, list_of_systems):
         self.connection_manager = ConnectionManager("rabbitmq", 5672, "user", "password")
         self.message_processor = MessageProcessor()
-        self.heartbeat_checker = HeartbeatChecker(list_of_systems)
+        self.heartbeat_checker = HeartbeatChecker(list_of_systems, self)
 
     def send_to_logstash(self, system_data):
         headers = {"Content-type": "application/json"}
         response = requests.post("http://logstash01:8095", json=system_data, headers=headers)
-        print(f"Send status: {response.status_code} - {response.text}", f"Data: {system_data}")
+        logging.info(f"\n\n\n\n\nSend status: {response.status_code} - {response.text}\nData: {system_data}\n\n\n\n\n")
+
 
     def handle_message(self, ch, method, properties, body):
         system_data = self.message_processor.process_message(body)
@@ -34,10 +36,6 @@ class SystemMonitor:
         print(json_data)
 
         self.send_to_logstash(json_data)
-
-        # if not is_active:
-        #     error_xml = f'<ErrorLog><Timestamp>{current_time}</Timestamp><SystemName>{system_data["SystemName"]}</SystemName><Status>Down</Status><Interval>{interval}</Interval></ErrorLog>'
-        #     self.connection_manager.send_xml_to_rabbitmq('mailing', system_data["SystemName"], error_xml)
 
     def consume_heartbeat_messages(self):
         connection = self.connection_manager.create_connection()
