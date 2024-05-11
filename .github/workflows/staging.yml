@@ -35,7 +35,7 @@ jobs:
       - name: Check if latest images exist
         id: check_latest_images
         run: |
-          declare -a images=("docker.elastic.co/kibana/kibana:8.13.3" "docker.elastic.co/elasticsearch/elasticsearch:8.13.3" "docker.elastic.co/logstash/logstash:8.13.3")
+          declare -a images=("controlroom-kibana:latest" "controlroom-elasticsearch:latest" "controlroom-logstash:latest")
           for image in "${images[@]}"; do
             image_key=$(echo "${image}" | sed 's/[^[:alnum:]]/_/g')
             if docker image inspect "$image" &> /dev/null; then
@@ -44,6 +44,7 @@ jobs:
               echo "::set-output name=${image_key}_exists::false"
             fi
           done
+      
 
       # - name: Backup previous state
       #   run: |
