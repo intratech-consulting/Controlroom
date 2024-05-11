@@ -8,8 +8,7 @@ WORKDIR /app
 COPY . /app
 
 # Install any needed dependencies specified in requirements.txt
-RUN pip install --trusted-host pypi.python.org pika requests
+RUN pip install --trusted-host pypi.python.org pika requests lxml
 
 # Run consumer.py when the container launches
 CMD sh -c "sleep 60; python Consumer/Main.py"
-
