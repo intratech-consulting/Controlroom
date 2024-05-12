@@ -4,12 +4,12 @@ on:
   push:
     branches:
       - production
-# testing workflows
+# testing workflows production
 jobs:
   deploy:
     name: Deploy to Production
     runs-on: [self-hosted]
-    environment: dev
+    environment: production
     env:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
