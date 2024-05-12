@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - production
-# testing workflows on production
+# testing workflows production
 jobs:
   deploy:
     name: Deploy to Production
