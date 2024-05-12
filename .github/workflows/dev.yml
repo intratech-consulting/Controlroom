@@ -46,15 +46,19 @@ jobs:
             fi
           done
 
-      - name: Backup previous state
+      - name: Configure SSH and Execute Backup
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
           backup_image() {
             local image=$1
             local tag=$2
             local backup_tag=$3
             if docker image inspect $image:$tag &> /dev/null; then
-              cd ~/production/Controlroom && \
+              cd ~/TestServer/Controlroom && \
               docker tag $image:$tag $image:$backup_tag
             fi
           }
@@ -62,6 +66,7 @@ jobs:
           backup_image controlroom-elasticsearch latest elasticsearch-backup
           backup_image controlroom-logstash latest logstash-backup
           backup_image controlroom-consumer latest consumer-backup"
+
 
 
       - name: Deploy new versions of Images
