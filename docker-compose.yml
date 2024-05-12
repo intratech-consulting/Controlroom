@@ -98,7 +98,17 @@ services:
     networks:
     - my_shared_network
     restart: always
-
+  
+  logger:
+    build:
+      context: .
+      dockerfile: Dockerfile.loggin
+    depends_on:
+      - logstash
+    networks:
+    - my_shared_network
+    restart: always
+    
 networks:
   my_shared_network:
     external: true
