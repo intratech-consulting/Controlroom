@@ -71,7 +71,11 @@ jobs:
 
       - name: Deploy new versions of Images
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
           deploy_image() {
             local image=$1
             local tag=$2
@@ -92,6 +96,7 @@ jobs:
           deploy_image 'controlroom-logstash' 'latest' '~/TestServer/Controlroom/logstash' \"${{ steps.check_latest_images.outputs.logstash_exists }}\"
           deploy_image 'controlroom-consumer' 'latest' '~/TestServer/Controlroom' \"${{ steps.check_latest_images.outputs.consumer_exists }}\""
 
+
         
         
         
@@ -99,7 +104,11 @@ jobs:
       - name: Check deployment status
         id: check_status
         run: |
-          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -v -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
           echo "Checking deployment status..."
           services=("controlroom-consumer-1" "controlroom-logstash-1" "controlroom-kibana-1" "controlroom-elasticsearch-1")
           all_good=true
@@ -122,10 +131,15 @@ jobs:
           ENDSSH
 
 
+
       - name: Rollback on failure
         if: steps.check_status.outcome != 'success'
         run: |
-          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -v -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
           echo "Starting rollback procedure..."
           rollback_service() {
             local service=$1
@@ -148,4 +162,5 @@ jobs:
           rollback_service "controlroom-elasticsearch" "backup"
           echo "Rollback completed."
           ENDSSH
+
 
