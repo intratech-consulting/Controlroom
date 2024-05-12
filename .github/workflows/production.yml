@@ -37,6 +37,7 @@ jobs:
         id: check_latest_images
         run: |
           declare -a images=("controlroom-kibana:latest" "controlroom-elasticsearch:latest" "controlroom-logstash:latest" "controlroom-consumer:latest")
+          declare -a images=("controlroom-kibana:latest" "controlroom-elasticsearch:latest" "controlroom-logstash:latest" "controlroom-consumer:latest")
           for image in "${images[@]}"; do
             image_key=$(echo "${image}" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
             if docker image inspect "$image" &> /dev/null; then
@@ -47,7 +48,14 @@ jobs:
           done
 
       - name: Configure SSH and Execute Backup
+
+      - name: Configure SSH and Execute Backup
         run: |
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
           mkdir -p ~/.ssh/
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
           chmod 600 ~/.ssh/deployment.key
@@ -59,6 +67,7 @@ jobs:
             local backup_tag=$3
             if docker image inspect $image:$tag &> /dev/null; then
               cd ~/production/Controlroom && \
+              cd ~/production/Controlroom && \
               docker tag $image:$tag $image:$backup_tag
             fi
           }
@@ -68,9 +77,41 @@ jobs:
           backup_image controlroom-consumer latest consumer-backup"
 
 
+          backup_image controlroom-kibana latest kibana-backup
+          backup_image controlroom-elasticsearch latest elasticsearch-backup
+          backup_image controlroom-logstash latest logstash-backup
+          backup_image controlroom-consumer latest consumer-backup"
+
+
 
       - name: Deploy new versions of Images
         run: |
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+          deploy_image() {
+            local image=$1
+            local tag=$2
+            local path=$3
+            local image_key=\$(echo \"$image\" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
+            echo \"Checking deployment status for \$image_key...\"
+            if [[ \"\$4\" == 'false' ]]; then
+              echo \"Deploying \${image}...\"
+              cd \"\$path\" && \
+              docker pull \"\$image:\$tag\" && \
+              docker compose up -d
+            else
+              echo \"\${image} already exists. Skipping deployment.\"
+            fi
+          }
+          deploy_image 'controlroom-kibana' 'latest' '~/production/Controlroom/kibana' \"${{ steps.check_latest_images.outputs.kibana_exists }}\"
+          deploy_image 'controlroom-elasticsearch' 'latest' '~/production/Controlroom/elasticsearch' \"${{ steps.check_latest_images.outputs.elasticsearch_exists }}\"
+          deploy_image 'controlroom-logstash' 'latest' '~/production/Controlroom/logstash' \"${{ steps.check_latest_images.outputs.logstash_exists }}\"
+          deploy_image 'controlroom-consumer' 'latest' '~/production/Controlroom' \"${{ steps.check_latest_images.outputs.consumer_exists }}\""
+
+
           mkdir -p ~/.ssh/
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
           chmod 600 ~/.ssh/deployment.key
@@ -109,7 +150,13 @@ jobs:
           chmod 600 ~/.ssh/deployment.key
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
           ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
           echo "Checking deployment status..."
+          services=("controlroom-consumer-1" "controlroom-logstash-1" "controlroom-kibana-1" "controlroom-elasticsearch-1")
           services=("controlroom-consumer-1" "controlroom-logstash-1" "controlroom-kibana-1" "controlroom-elasticsearch-1")
           all_good=true
 
@@ -132,9 +179,16 @@ jobs:
 
 
 
+
+
       - name: Rollback on failure
         if: steps.check_status.outcome != 'success'
         run: |
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
           mkdir -p ~/.ssh/
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
           chmod 600 ~/.ssh/deployment.key
@@ -154,13 +208,31 @@ jobs:
             docker-compose up -d
             # Optionally, revert changes in docker-compose.yml to use the latest tag
             sed -i "s/$service:$backup_tag/$service:latest/g" docker-compose.yml
+            local backup_tag=$2
+            echo "Rolling back $service to $backup_tag..."
+            # Navigate to the Controlroom directory where docker-compose.yml is located
+            cd ~/production/Controlroom
+            # Temporarily update the image in docker-compose.yml to use the backup image
+            sed -i "s/$service:latest/$service:$backup_tag/g" docker-compose.yml
+            # Use Docker Compose to restart the service
+            docker-compose down
+            docker-compose up -d
+            # Optionally, revert changes in docker-compose.yml to use the latest tag
+            sed -i "s/$service:$backup_tag/$service:latest/g" docker-compose.yml
           }
 
           rollback_service "controlroom-consumer" "backup"
           rollback_service "controlroom-logstash" "backup"
           rollback_service "controlroom-kibana" "backup"
           rollback_service "controlroom-elasticsearch" "backup"
+          rollback_service "controlroom-consumer" "backup"
+          rollback_service "controlroom-logstash" "backup"
+          rollback_service "controlroom-kibana" "backup"
+          rollback_service "controlroom-elasticsearch" "backup"
           echo "Rollback completed."
           ENDSSH
+
+
+
 
 
