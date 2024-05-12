@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - dev
-# testing workflows
+# testing workflows dev
 jobs:
   deploy:
     name: Deploy to Dev
