@@ -1,15 +1,15 @@
-name: Deploy to Dev
+name: Deploy to Staging
 
 on:
   push:
     branches:
-      - dev
+      - staging
 # testing workflows
 jobs:
   deploy:
-    name: Deploy to Dev
+    name: Deploy to Staging
     runs-on: [self-hosted]
-    environment: dev
+    environment: staging
     env:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
