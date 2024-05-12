@@ -47,7 +47,6 @@ jobs:
             fi
           done
 
-      - name: Configure SSH and Execute Backup
 
       - name: Configure SSH and Execute Backup
         run: |
