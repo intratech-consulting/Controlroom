@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - staging
-# testing workflows
+# testing workflows staging
 jobs:
   deploy:
     name: Deploy to Dev
