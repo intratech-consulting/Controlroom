@@ -1,15 +1,15 @@
-name: Deploy to Staging
+name: Deploy to Dev
 
 on:
   push:
     branches:
-      - staging
-
+      - dev
+# testing workflows
 jobs:
   deploy:
-    name: Deploy to Staging
+    name: Deploy to Dev
     runs-on: [self-hosted]
-    environment: staging
+    environment: dev
     env:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
@@ -27,17 +27,18 @@ jobs:
 
       - name: Test SSH Connection
         run: |
-          ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
-
+            ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
+          
+      
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Check if latest images exist
         id: check_latest_images
         run: |
-          declare -a images=("controlroom-kibana:latest" "controlroom-elasticsearch:latest" "controlroom-logstash:latest")
+          declare -a images=("controlroom-kibana:latest" "controlroom-elasticsearch:latest" "controlroom-logstash:latest" "controlroom-consumer:latest")
           for image in "${images[@]}"; do
-            image_key=$(echo "${image}" | sed 's/[^[:alnum:]]/_/g')
+            image_key=$(echo "${image}" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
             if docker image inspect "$image" &> /dev/null; then
               echo "::set-output name=${image_key}_exists::true"
             else
@@ -45,31 +46,41 @@ jobs:
             fi
           done
 
-      - name: Backup previous state
+      - name: Configure SSH and Execute Backup
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
-          cd ~/staging/Controlroom && \
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
           backup_image() {
             local image=$1
             local tag=$2
             local backup_tag=$3
             if docker image inspect $image:$tag &> /dev/null; then
+              cd ~/staging/Controlroom && \
               docker tag $image:$tag $image:$backup_tag
             fi
           }
-          backup_image 'controlroom-kibana' 'latest' 'backup'
-          backup_image 'controlroom-elasticsearch' 'latest' 'backup'
-          backup_image 'controlroom-logstash' 'latest' 'backup'"
+          backup_image controlroom-kibana latest kibana-backup
+          backup_image controlroom-elasticsearch latest elasticsearch-backup
+          backup_image controlroom-logstash latest logstash-backup
+          backup_image controlroom-consumer latest consumer-backup"
+
+
 
       - name: Deploy new versions of Images
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
-          cd ~/staging/Controlroom && \
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
           deploy_image() {
             local image=$1
             local tag=$2
             local path=$3
-            local image_key=\$(echo \"$image\" | sed 's/[^[:alnum:]]/_/g')
+            local image_key=\$(echo \"$image\" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
             echo \"Checking deployment status for \$image_key...\"
             if [[ \"\$4\" == 'false' ]]; then
               echo \"Deploying \${image}...\"
@@ -80,16 +91,26 @@ jobs:
               echo \"\${image} already exists. Skipping deployment.\"
             fi
           }
-          deploy_image 'controlroom-kibana' 'latest' './kibana' \"${{ steps.check_latest_images.outputs.controlroom_kibana_latest_exists }}\"
-          deploy_image 'controlroom-elasticsearch' 'latest' './elasticsearch' \"${{ steps.check_latest_images.outputs.controlroom_elasticsearch_latest_exists }}\"
-          deploy_image 'controlroom-logstash' 'latest' './logstash' \"${{ steps.check_latest_images.outputs.controlroom_logstash_latest_exists }}\""
+          deploy_image 'controlroom-kibana' 'latest' '~/staging/Controlroom/kibana' \"${{ steps.check_latest_images.outputs.kibana_exists }}\"
+          deploy_image 'controlroom-elasticsearch' 'latest' '~/staging/Controlroom/elasticsearch' \"${{ steps.check_latest_images.outputs.elasticsearch_exists }}\"
+          deploy_image 'controlroom-logstash' 'latest' '~/staging/Controlroom/logstash' \"${{ steps.check_latest_images.outputs.logstash_exists }}\"
+          deploy_image 'controlroom-consumer' 'latest' '~/staging/Controlroom' \"${{ steps.check_latest_images.outputs.consumer_exists }}\""
+
+
+        
+        
+        
 
       - name: Check deployment status
         id: check_status
         run: |
-          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -v -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
           echo "Checking deployment status..."
-          services=("controlroom-monitoring-consumer" "controlroom-monitoring-logstash01" "controlroom-monitoring-kibana" "controlroom-monitoring-es01")
+          services=("controlroom-consumer-1" "controlroom-logstash-1" "controlroom-kibana-1" "controlroom-elasticsearch-1")
           all_good=true
 
           for service in "${services[@]}"; do
@@ -109,22 +130,37 @@ jobs:
           fi
           ENDSSH
 
+
+
       - name: Rollback on failure
         if: steps.check_status.outcome != 'success'
         run: |
-          sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -v -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deployment.key
+          chmod 600 ~/.ssh/deployment.key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
           echo "Starting rollback procedure..."
           rollback_service() {
             local service=$1
-            local backup_image=$2
-            echo "Rolling back $service..."
-            docker-compose -f ~/staging/Controlroom/$service/docker-compose.yml down
-            docker run -d --name $service $backup_image
+            local backup_tag=$2
+            echo "Rolling back $service to $backup_tag..."
+            # Navigate to the Controlroom directory where docker-compose.yml is located
+            cd ~/staging/Controlroom
+            # Temporarily update the image in docker-compose.yml to use the backup image
+            sed -i "s/$service:latest/$service:$backup_tag/g" docker-compose.yml
+            # Use Docker Compose to restart the service
+            docker-compose down
+            docker-compose up -d
+            # Optionally, revert changes in docker-compose.yml to use the latest tag
+            sed -i "s/$service:$backup_tag/$service:latest/g" docker-compose.yml
           }
 
-          rollback_service "controlroom-monitoring-consumer" "controlroom-monitoring-consumer:backup"
-          rollback_service "controlroom-monitoring-logstash01" "controlroom-logstash:backup"
-          rollback_service "controlroom-monitoring-kibana" "controlroom-kibana:backup"
-          rollback_service "controlroom-monitoring-es01" "controlroom-elasticsearch:backup"
+          rollback_service "controlroom-consumer" "backup"
+          rollback_service "controlroom-logstash" "backup"
+          rollback_service "controlroom-kibana" "backup"
+          rollback_service "controlroom-elasticsearch" "backup"
           echo "Rollback completed."
           ENDSSH
+
+
