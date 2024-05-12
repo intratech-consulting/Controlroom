@@ -36,7 +36,7 @@ jobs:
       - name: Check if latest images exist
         id: check_latest_images
         run: |
-          declare -a images=("docker.elastic.co/kibana/kibana:8.13.3" "docker.elastic.co/elasticsearch/elasticsearch:8.13.3" "docker.elastic.co/logstash/logstash:8.13.3")
+          declare -a images=("controlroom-kibana:latest" "controlroom-elasticsearch:latest" "controlroom-logstash:latest" "controlroom-consumer:latest")
           for image in "${images[@]}"; do
             image_key=$(echo "${image}" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
             if docker image inspect "$image" &> /dev/null; then
@@ -45,7 +45,6 @@ jobs:
               echo "::set-output name=${image_key}_exists::false"
             fi
           done
-      
 
       - name: Backup previous state
         run: |
@@ -59,31 +58,35 @@ jobs:
               docker tag $image:$tag $image:$backup_tag
             fi
           }
-          backup_image docker.elastic.co/kibana/kibana 8.13.3 backup
-          backup_image docker.elastic.co/elasticsearch/elasticsearch 8.13.3 backup
-          backup_image docker.elastic.co/logstash/logstash 8.13.3 backup"
+          backup_image controlroom-kibana latest kibana-backup
+          backup_image controlroom-elasticsearch latest elasticsearch-backup
+          backup_image controlroom-logstash latest logstash-backup
+          backup_image controlroom-consumer latest consumer-backup"
+
 
       - name: Deploy new versions of Images
         run: |
-            ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
-            deploy_image() {
-              local image=$1
-              local tag=$2
-              local path=$3
-              local image_key=\$(echo \"$image\" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
-              echo \"Checking deployment status for \$image_key...\"
-              if [[ \"\$4\" == 'false' ]]; then
-                echo \"Deploying \${image}...\"
-                cd \"\$path\" && \
-                docker pull \"\$image:\$tag\" && \
-                docker compose up -d
-              else
-                echo \"\${image} already exists. Skipping deployment.\"
-              fi
-            }
-            deploy_image 'docker.elastic.co/kibana/kibana' '8.13.3' '~/production/path/to/kibana' \"${{ steps.check_latest_images.outputs.kibana_exists }}\"
-            deploy_image 'docker.elastic.co/elasticsearch/elasticsearch' '8.13.3' '~/production/path/to/elasticsearch' \"${{ steps.check_latest_images.outputs.elasticsearch_exists }}\"
-            deploy_image 'docker.elastic.co/logstash/logstash' '8.13.3' '~/production/path/to/logstash' \"${{ steps.check_latest_images.outputs.logstash_exists }}\""
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+          deploy_image() {
+            local image=$1
+            local tag=$2
+            local path=$3
+            local image_key=\$(echo \"$image\" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
+            echo \"Checking deployment status for \$image_key...\"
+            if [[ \"\$4\" == 'false' ]]; then
+              echo \"Deploying \${image}...\"
+              cd \"\$path\" && \
+              docker pull \"\$image:\$tag\" && \
+              docker compose up -d
+            else
+              echo \"\${image} already exists. Skipping deployment.\"
+            fi
+          }
+          deploy_image 'controlroom-kibana' 'latest' '~/TestServer/Controlroom/kibana' \"${{ steps.check_latest_images.outputs.kibana_exists }}\"
+          deploy_image 'controlroom-elasticsearch' 'latest' '~/TestServer/Controlroom/elasticsearch' \"${{ steps.check_latest_images.outputs.elasticsearch_exists }}\"
+          deploy_image 'controlroom-logstash' 'latest' '~/TestServer/Controlroom/logstash' \"${{ steps.check_latest_images.outputs.logstash_exists }}\"
+          deploy_image 'controlroom-consumer' 'latest' '~/TestServer/Controlroom' \"${{ steps.check_latest_images.outputs.consumer_exists }}\""
+
         
         
         
@@ -93,7 +96,7 @@ jobs:
         run: |
           sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -v -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
           echo "Checking deployment status..."
-          services=("controlroom-monitoring-consumer" "controlroom-monitoring-logstash01" "controlroom-monitoring-kibana" "controlroom-monitoring-es01")
+          services=("controlroom-consumer-1" "controlroom-logstash-1" "controlroom-kibana-1" "controlroom-elasticsearch-1")
           all_good=true
 
           for service in "${services[@]}"; do
@@ -113,6 +116,7 @@ jobs:
           fi
           ENDSSH
 
+
       - name: Rollback on failure
         if: steps.check_status.outcome != 'success'
         run: |
@@ -120,15 +124,23 @@ jobs:
           echo "Starting rollback procedure..."
           rollback_service() {
             local service=$1
-            local backup_image=$2
-            echo "Rolling back $service..."
-            docker-compose -f ~/production/path/to/$service/docker-compose.yml down
-            docker run -d --name $service $backup_image
+            local backup_tag=$2
+            echo "Rolling back $service to $backup_tag..."
+            # Navigate to the Controlroom directory where docker-compose.yml is located
+            cd ~/TestServer/Controlroom
+            # Temporarily update the image in docker-compose.yml to use the backup image
+            sed -i "s/$service:latest/$service:$backup_tag/g" docker-compose.yml
+            # Use Docker Compose to restart the service
+            docker-compose down
+            docker-compose up -d
+            # Optionally, revert changes in docker-compose.yml to use the latest tag
+            sed -i "s/$service:$backup_tag/$service:latest/g" docker-compose.yml
           }
 
-          rollback_service "controlroom-monitoring-consumer" "controlroom-monitoring-consumer:backup"
-          rollback_service "controlroom-monitoring-logstash01" "docker.elastic.co/logstash/logstash:backup"
-          rollback_service "controlroom-monitoring-kibana" "docker.elastic.co/kibana/kibana:backup"
-          rollback_service "controlroom-monitoring-es01" "docker.elastic.co/elasticsearch/elasticsearch:backup"
+          rollback_service "controlroom-consumer" "backup"
+          rollback_service "controlroom-logstash" "backup"
+          rollback_service "controlroom-kibana" "backup"
+          rollback_service "controlroom-elasticsearch" "backup"
           echo "Rollback completed."
           ENDSSH
+
