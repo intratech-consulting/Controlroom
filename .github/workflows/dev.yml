@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - dev
-# testing CI/CD
+# testing workflows
 jobs:
   deploy:
     name: Deploy to Dev
@@ -55,7 +55,7 @@ jobs:
             local tag=$2
             local backup_tag=$3
             if docker image inspect $image:$tag &> /dev/null; then
-              cd ~/production/path/to/$image && \
+              cd ~/production/Controlroom && \
               docker tag $image:$tag $image:$backup_tag
             fi
           }
