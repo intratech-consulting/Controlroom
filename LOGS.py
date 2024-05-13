@@ -41,6 +41,7 @@ channel = connection.channel()
 
 # Declare the queue
 channel.queue_declare(queue='Loggin_queue', durable=True)
+channel.queue_bind(exchange='amq.topic', queue='Loggin_queue', routing_key='logs')
 
 # Format the XML with the current timestamp
 formatted_Loggin_xml = Loggin_xml.format(datetime.utcnow().isoformat())
