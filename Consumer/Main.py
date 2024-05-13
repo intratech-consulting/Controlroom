@@ -53,7 +53,14 @@ if __name__ == "__main__":
     list_of_systems = ['crm', 'frontend', 'kassa', 'ExampleSystem', 'facturatie', 'planning', 'mailing', 'inventree']
     system_monitor = SystemMonitor(list_of_systems)
     
-    system_monitor.heartbeat_checker.start_monitoring()
+    while(True):
+        try:
+            system_monitor.heartbeat_checker.start_monitoring()
+            system_monitor.consume_heartbeat_messages()
+        except Exception as e:
+            logging.exception(f"An exception occurred: {e}")
+            time.sleep(5)
+            
 
-    system_monitor.consume_heartbeat_messages()
+
 
