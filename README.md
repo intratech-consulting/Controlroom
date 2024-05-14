@@ -66,4 +66,4 @@ This project was inspired by and built upon the setup provided by the [docker-el
 
 ## Contact
 
-For any issues or inquiries, please contact [admin@example.com](mailto:admin@example.com).
+For any issues or inquiries, please contact [admin@example.com](Jimmy.de.wit@student.ehb.be).
