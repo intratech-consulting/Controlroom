@@ -5,8 +5,8 @@ from datetime import datetime
 Loggin_xml = """
 <LogEntry>
     <SystemName>ExampleSystem</SystemName>
-    <FunctionName>ProcessData</FunctionName>
-    <Logs>Execution started successfully.</Logs>
+    <FunctionName>send data</FunctionName>
+    <Logs>Medhi</Logs>
     <Error>false</Error>
     <Timestamp>{}</Timestamp>
 </LogEntry>

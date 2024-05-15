@@ -2,8 +2,11 @@ import pika
 import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
+import logging
+import json
 
-import xml.etree.ElementTree as ET
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def xml_to_json(xml_data):
     """Convert XML data to JSON format, handling cases where elements may be missing."""
@@ -30,36 +33,44 @@ def xml_to_json(xml_data):
 def on_message_received(channel, method_frame, header_frame, body):
     try:
         headers = {"Content-type": "application/json"}
-        print("Received message: %r" % body)
+        logging.info(f"Received message: {body}")
         json_data = xml_to_json(body.decode())
-        print("Converted JSON:", json_data)
+        logging.info(f"Converted JSON: {json.dumps(json_data, indent=2)}")
         response = requests.post('http://logstash:8096', json=json_data, headers=headers)
         if response.status_code == 200:
-            print("Successfully sent message to Logstash.")
+            logging.info("Successfully sent message to Logstash.")
             channel.basic_ack(delivery_tag=method_frame.delivery_tag)
         else:
-            print("Failed to send message to Logstash:", response.text)
+            logging.error(f"Failed to send message to Logstash: {response.status_code} - {response.text}")
             channel.basic_nack(delivery_tag=method_frame.delivery_tag)
     except Exception as e:
-        print("Error processing message:", e, "\n\n\n\n")
+        logging.error(f"Error processing message: {e}", exc_info=True)
         channel.basic_nack(delivery_tag=method_frame.delivery_tag)
 
-
 def main():
-    connection_params = pika.ConnectionParameters('localhost', 5672, '/', pika.PlainCredentials('user', 'password'))
-    connection = pika.BlockingConnection(connection_params)
-    channel = connection.channel()
-    
-    channel.queue_declare(queue='Loggin_queue', durable=True)
-    channel.basic_consume('Loggin_queue', on_message_received, auto_ack=False)
-    
-    print("Starting to consume from RabbitMQ...")
+    connection_params = pika.ConnectionParameters('rabbitmq', 5672, '/', pika.PlainCredentials('user', 'password'))
     try:
+        connection = pika.BlockingConnection(connection_params)
+        logging.info("Connected to RabbitMQ")
+        channel = connection.channel()
+        
+        channel.queue_declare(queue='Loggin_queue', durable=True)
+        channel.basic_consume('Loggin_queue', on_message_callback=on_message_received, auto_ack=False)
+        
+        logging.info("Starting to consume from RabbitMQ...")
         channel.start_consuming()
+    except pika.exceptions.AMQPConnectionError as e:
+        logging.error(f"Failed to connect to RabbitMQ: {e}", exc_info=True)
     except KeyboardInterrupt:
-        print("Consumer stopped.")
-        connection.close()
-        print("Connection closed")
+        logging.info("Consumer stopped.")
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}", exc_info=True)
+    finally:
+        try:
+            connection.close()
+            logging.info("Connection closed")
+        except Exception as e:
+            logging.error(f"Error closing connection: {e}", exc_info=True)
 
 if __name__ == '__main__':
     main()
