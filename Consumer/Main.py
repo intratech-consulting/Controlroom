@@ -29,25 +29,24 @@ class SystemMonitor:
             logging.error(f"Error sending data to Logstash: {e}\nData: {system_data}", exc_info=True)
 
     def handle_message(self, ch, method, properties, body):
-        try:
             system_data = self.message_processor.process_message(body)
             current_time = time.time()  # Record the time the message was processed
             formatted_time = datetime.utcfromtimestamp(current_time).isoformat() + 'Z'
 
-            is_active, interval = self.heartbeat_checker.check_system_active(system_data["SystemName"], current_time)
+            need_send, is_active, interval = self.heartbeat_checker.check_system_active(system_data["SystemName"], current_time)
 
-            json_data = {
+            if need_send:
+                json_data = {
                 "Timestamp": formatted_time,
                 "SystemName": system_data["SystemName"],
-                "Status": "Active" if is_active else "Inactive",
+                "Status": "Active" if is_active else "Down",
                 "Heartbeat-Interval": interval
-            }
-
-            logging.info(f"Processed message: {json_data}")
-
-            self.send_to_logstash(json_data)
-        except Exception as e:
-            logging.error(f"Error handling message: {e}", exc_info=True)
+                }   
+                try:
+                    logging.info(f"Processed message: {json_data}")
+                    self.send_to_logstash(json_data)
+                except Exception as e:
+                    logging.error(f"Error handling message: {e}", exc_info=True)
 
     def consume_heartbeat_messages(self):
         connection = self.connection_manager.create_connection()
