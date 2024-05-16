@@ -6,7 +6,7 @@ Loggin_xml = """
 <LogEntry>
     <SystemName>ExampleSystem</SystemName>
     <FunctionName>send data</FunctionName>
-    <Logs>Medhi</Logs>
+    <Logs>data send successfully</Logs>
     <Error>false</Error>
     <Timestamp>{}</Timestamp>
 </LogEntry>
