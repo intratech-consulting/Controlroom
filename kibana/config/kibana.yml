@@ -1,4 +1,6 @@
-
+## Default Kibana configuration from Kibana base image.
+## https://github.com/elastic/kibana/blob/main/src/dev/build/tasks/os_packages/docker_generator/templates/kibana_yml.template.ts
+#
 server.name: kibana
 server.host: 0.0.0.0
 elasticsearch.hosts: [ http://elasticsearch:9200 ]
@@ -10,6 +12,16 @@ monitoring.ui.container.logstash.enabled: true
 elasticsearch.username: kibana_system
 elasticsearch.password: ${KIBANA_SYSTEM_PASSWORD}
 
+## Encryption keys (required for saved objects)
+##
+## Add your generated encryption key below
+xpack.security.encryptionKey: "2620e40c4e2d70bbcecf6bfbf94beccbe07e116dc0ea98b7d97138776a842953"
+xpack.encryptedSavedObjects.encryptionKey: "2620e40c4e2d70bbcecf6bfbf94beccbe07e116dc0ea98b7d97138776a842953"
+xpack.reporting.encryptionKey: "2620e40c4e2d70bbcecf6bfbf94beccbe07e116dc0ea98b7d97138776a842953"
+
+## Fleet
+## https://www.elastic.co/guide/en/kibana/current/fleet-settings-kb.html
+#
 xpack.fleet.agents.fleet_server.hosts: [ http://fleet-server:8220 ]
 
 xpack.fleet.outputs:
@@ -68,8 +80,6 @@ xpack.fleet.agentPolicies:
       - name: apm-1
         package:
           name: apm
-        # See the APM package manifest for a list of possible inputs.
-        # https://github.com/elastic/apm-server/blob/v8.5.0/apmpackage/apm/manifest.yml#L41-L168
         inputs:
           - type: apm
             vars:

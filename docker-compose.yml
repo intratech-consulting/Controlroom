@@ -63,6 +63,8 @@ services:
       - 50000:50000/tcp
       - 50000:50000/udp
       - 9600:9600
+      - 8095:8095   # HTTP input port for heartbeat
+      - 8096:8096   # HTTP input port for logs
     environment:
       LS_JAVA_OPTS: -Xms256m -Xmx256m
       LOGSTASH_INTERNAL_PASSWORD: ${LOGSTASH_INTERNAL_PASSWORD:-}
@@ -98,7 +100,17 @@ services:
     networks:
     - my_shared_network
     restart: always
-
+  
+  logger:
+    build:
+      context: .
+      dockerfile: Dockerfile.loggin
+    depends_on:
+      - logstash
+    networks:
+    - my_shared_network
+    restart: always
+    
 networks:
   my_shared_network:
     external: true
