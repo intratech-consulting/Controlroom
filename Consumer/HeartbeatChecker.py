@@ -91,7 +91,6 @@ class HeartbeatChecker:
     def check_system_active(self, system_name, current_time):
         last_time = self.last_heartbeat.get(system_name)
         interval = 0
-        
         if last_time is not None:
             interval = current_time - last_time
             if interval >= 5:
@@ -100,7 +99,7 @@ class HeartbeatChecker:
                     self.system_state[system_name] = False
                     self.system_down_time[system_name] = last_time  # Mark the time the system went down
                     self.last_heartbeat[system_name] = current_time
-                    return False, interval
+                    return True, False, -1
                 else:
                     if self.system_down_time[system_name] is not None:
                         downtime = self.last_heartbeat[system_name] - self.system_down_time[system_name]
@@ -111,7 +110,7 @@ class HeartbeatChecker:
                     self.last_heartbeat[system_name] = current_time
                     self.system_state[system_name] = True
                     self.system_down_time[system_name] = None
-                    return False, downtime  # Indicating a reset
+                    return True, True, downtime  # Indicating a reset
 
             else:
                 # If interval < 5 seconds, and system was previously inactive
@@ -119,14 +118,15 @@ class HeartbeatChecker:
                     if self.system_down_time[system_name] is not None:
                         downtime = current_time - self.system_down_time[system_name]
                     else:
-                        downtime = 0  # No recorded down time
+                        downtime = interval  # No recorded down time
                         
                     self.system_state[system_name] = True  # Mark system as active
                     self.last_heartbeat[system_name] = current_time
-                    return True, downtime
+                    return False, False, -3
         else:
-            # First heartbeat, no last time available
+            # First heartbeat, no last time available                
             self.last_heartbeat[system_name] = current_time
-                
+            return True, True, 0
+
         self.last_heartbeat[system_name] = current_time
-        return True, interval
+        return False, True, -5
