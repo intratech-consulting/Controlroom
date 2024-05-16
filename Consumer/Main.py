@@ -16,6 +16,7 @@ class SystemMonitor:
         self.connection_manager = ConnectionManager("rabbitmq", 5672, "user", "password")
         self.message_processor = MessageProcessor()
         self.heartbeat_checker = HeartbeatChecker(list_of_systems, self)
+        self.heartbeat_checker = HeartbeatChecker(list_of_systems, self)
 
     def send_to_logstash(self, system_data):
         headers = {"Content-type": "application/json"}
