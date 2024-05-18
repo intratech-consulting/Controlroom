@@ -5,14 +5,11 @@ import logging
 import sys
 from MessageProcessor import MessageProcessor
 
-
-
 logging.basicConfig(
     stream=sys.stdout,
     level=logging.DEBUG,  # You can adjust the level to INFO or ERROR as needed
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
-
 
 class HeartbeatChecker:
     def __init__(self, list_of_systems, monitor):
@@ -41,12 +38,14 @@ class HeartbeatChecker:
             </xs:element>
         </xs:schema>
         """
-        # Initialize the MessageProcessor
         self.message_processor = MessageProcessor()
     
     def start_monitoring(self):
         self.monitoring_thread = threading.Thread(target=self.run_monitoring)
         self.monitoring_thread.start()
+        # Start a new thread to send constant status updates
+        self.status_thread = threading.Thread(target=self.system_monitor.send_constant_status)
+        self.status_thread.start()
     
     def run_monitoring(self):
         while True:
@@ -61,8 +60,6 @@ class HeartbeatChecker:
         # Record the current time as a timestamp
         current_time = time.time()
 
-        # Convert current time to string just for logging
-        # current_time = datetime.utcfromtimestamp(unfromatted_time).isoformat() + 'Z'
         logging.error("\n\n\n\n\n\n\n\n\n\nchecking systems\n\n\n\n\n\n\n\n\n\n")
         
         for system_name in self.last_heartbeat.keys():
@@ -86,8 +83,6 @@ class HeartbeatChecker:
             elif self.last_heartbeat[system_name] is None:
                 self.system_state[system_name] = None  # Still no heartbeat received
 
-
-
     def check_system_active(self, system_name, current_time):
         last_time = self.last_heartbeat.get(system_name)
         interval = 0
@@ -105,7 +100,6 @@ class HeartbeatChecker:
                         downtime = self.last_heartbeat[system_name] - self.system_down_time[system_name]
                     else:
                         downtime = interval  # Treat as no downtime recorded yet
-                        
 
                     self.last_heartbeat[system_name] = current_time
                     self.system_state[system_name] = True
