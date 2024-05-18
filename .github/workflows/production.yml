@@ -230,8 +230,3 @@ jobs:
           rollback_service "controlroom-elasticsearch" "backup"
           echo "Rollback completed."
           ENDSSH
-
-
-
-
-
