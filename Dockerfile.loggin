@@ -12,4 +12,4 @@ RUN pip install --trusted-host pypi.python.org pika requests lxml
 
 
 # Run consumer.py when the container launches
-CMD sh -c "sleep 60; python Loggin_Consumer.py"
+CMD sh -c "sleep 60; python Loggin/Main.py"

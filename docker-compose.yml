@@ -101,7 +101,7 @@ services:
     - my_shared_network
     restart: always
   
-  logger:
+  loggin:
     build:
       context: .
       dockerfile: Dockerfile.loggin
