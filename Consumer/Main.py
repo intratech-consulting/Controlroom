@@ -9,16 +9,22 @@ from MessageProcessor import MessageProcessor
 from HeartbeatChecker import HeartbeatChecker
 import logging
 import json
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from .env file
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class SystemMonitor:
     def __init__(self, list_of_systems):
-        self.connection_manager = ConnectionManager("rabbitmq", 5672, "user", "password")
+        self.connection_manager = ConnectionManager()
         self.message_processor = MessageProcessor()
         self.heartbeat_checker = HeartbeatChecker(list_of_systems, self)
         self.session = self.create_http_session()
+        self.logstash_url_heartbeat_json = os.getenv('LOGSTASH_URL_HEARTBEAT_JSON')
+        self.logstash_url_heartbeat_downup = os.getenv('LOGSTASH_URL_HEARTBEAT_DOWNUP')
 
     def create_http_session(self):
         session = requests.Session()
@@ -31,7 +37,7 @@ class SystemMonitor:
     def send_to_logstash(self, system_data):
         headers = {"Content-type": "application/json"}
         try:
-            response = self.session.post("http://logstash:8095", json=system_data, headers=headers)
+            response = self.session.post(self.logstash_url_heartbeat_json, json=system_data, headers=headers)
             if response.status_code == 200:
                 logging.info(f"Data sent to Logstash successfully: {system_data}")
             else:
@@ -42,7 +48,7 @@ class SystemMonitor:
     def send_to_http_endpoint(self, system_data):
         headers = {"Content-type": "application/json"}
         try:
-            response = self.session.post("http://logstash:8097", json=system_data, headers=headers)
+            response = self.session.post(self.logstash_url_heartbeat_downup, json=system_data, headers=headers)
             if response.status_code == 200:
                 logging.info(f"Data sent to HTTP endpoint successfully: {system_data}")
             else:

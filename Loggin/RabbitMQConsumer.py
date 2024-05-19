@@ -1,13 +1,20 @@
 import pika
 import logging
+import os
+from dotenv import load_dotenv
 from MessageProcessor import MessageProcessor
 from LogstashSender import LogstashSender
+
+load_dotenv()  # Load environment variables from .env file
 
 class RabbitMQConsumer:
     def __init__(self, queue_name):
         self.queue_name = queue_name
         self.connection_params = pika.ConnectionParameters(
-            'rabbitmq', 5672, '/', pika.PlainCredentials('user', 'password')
+            os.getenv('RABBITMQ_HOST'),
+            int(os.getenv('RABBITMQ_PORT')),
+            '/',
+            pika.PlainCredentials(os.getenv('RABBITMQ_USER'), os.getenv('RABBITMQ_PASSWORD'))
         )
 
     def on_message_received(self, channel, method_frame, header_frame, body):

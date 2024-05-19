@@ -3,7 +3,11 @@ import time
 from datetime import datetime
 import logging
 import sys
+import os
+from dotenv import load_dotenv
 from MessageProcessor import MessageProcessor
+
+load_dotenv()  # Load environment variables from .env file
 
 logging.basicConfig(
     stream=sys.stdout,
