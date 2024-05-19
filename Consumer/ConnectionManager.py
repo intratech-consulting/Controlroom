@@ -1,9 +1,19 @@
 import pika
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from .env file
 
 class ConnectionManager:
-    def __init__(self, host, port, username, password):
+    def __init__(self, host=None, port=None, username=None, password=None):
         self.parameters = pika.ConnectionParameters(
-            host, port, "/", pika.PlainCredentials(username, password)
+            host or os.getenv('RABBITMQ_HOST'),
+            port or int(os.getenv('RABBITMQ_PORT')),
+            "/",
+            pika.PlainCredentials(
+                username or os.getenv('RABBITMQ_USER'),
+                password or os.getenv('RABBITMQ_PASSWORD')
+            )
         )
 
     def create_connection(self):

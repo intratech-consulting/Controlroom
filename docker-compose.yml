@@ -94,23 +94,27 @@ services:
   consumer:
     build:
       context: .
-      dockerfile: Dockerfile.consumer
+      dockerfile: Consumer/Dockerfile.consumer
     depends_on:
       - logstash
     networks:
-    - my_shared_network
+      - my_shared_network
     restart: always
+    env_file:
+      - .env  # Reference the .env file in the same Controlroom directory
   
   loggin:
     build:
       context: .
-      dockerfile: Dockerfile.loggin
+      dockerfile: Loggin/Dockerfile.loggin
     depends_on:
       - logstash
     networks:
-    - my_shared_network
+      - my_shared_network
     restart: always
-    
+    env_file:
+      - .env  # Reference the .env file in the same Controlroom directory
+
 networks:
   my_shared_network:
     external: true
