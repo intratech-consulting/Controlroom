@@ -2,11 +2,15 @@ from lxml import etree as ET
 from datetime import datetime
 from ConnectionManager import ConnectionManager
 import logging
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from .env file
 
 class MessageProcessor:
     
     def __init__(self):
-        self.connection_manager = ConnectionManager("rabbitmq", 5672, "user", "password")
+        self.connection_manager = ConnectionManager()
 
     def process_message(self, xml_data):
         root = ET.fromstring(xml_data)
@@ -33,5 +37,3 @@ class MessageProcessor:
                 logging.info(f"\n\n\n\n\nXML NOT VALID: {log}\n\n\n\n\n")
         except Exception as e:
                 logging.error(f"\n\n\n\n\n\nError XML SENDING: {e}\n\n\n\n\n\n")
-
-            
