@@ -8,8 +8,6 @@ elasticsearch.hosts: [ http://elasticsearch:9200 ]
 monitoring.ui.container.elasticsearch.enabled: true
 monitoring.ui.container.logstash.enabled: true
 
-## X-Pack security credentials
-#
 elasticsearch.username: kibana_system
 elasticsearch.password: ${KIBANA_SYSTEM_PASSWORD}
 
@@ -88,3 +86,6 @@ xpack.fleet.agentPolicies:
                 value: 0.0.0.0:8200
               - name: url
                 value: http://apm-server:8200
+
+## Public Base URL
+server.publicBaseUrl: "http://10.2.160.53:5601"
