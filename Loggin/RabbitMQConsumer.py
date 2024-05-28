@@ -25,6 +25,7 @@ class RabbitMQConsumer:
             if LogstashSender.send_to_logstash(json_data):
                 channel.basic_ack(delivery_tag=method_frame.delivery_tag)
             else:
+                logging.error("Failed to send message to Logstash")
                 channel.basic_nack(delivery_tag=method_frame.delivery_tag)
         except Exception as e:
             logging.error(f"Error processing message: {e}", exc_info=True)
@@ -44,7 +45,7 @@ class RabbitMQConsumer:
         except pika.exceptions.AMQPConnectionError as e:
             logging.error(f"Failed to connect to RabbitMQ: {e}", exc_info=True)
         except KeyboardInterrupt:
-            logging.info("Consumer stopped.")
+            logging.warning("Consumer stopped.")
         except Exception as e:
             logging.error(f"Unexpected error: {e}", exc_info=True)
         finally:
