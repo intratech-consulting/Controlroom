@@ -14,7 +14,7 @@ import os
 load_dotenv()
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class SystemMonitor:
     def __init__(self, list_of_systems):
@@ -75,7 +75,7 @@ class SystemMonitor:
             sys.exit(1)
 
 if __name__ == "__main__":
-    list_of_systems = ['crm', 'frontend', 'kassa', 'ExampleSystem', 'facturatie', 'planning', 'mailing', 'inventree']
+    list_of_systems = ['crm', 'frontend', 'kassa', 'ExampleSystem', 'facturatie', 'planning', 'mailing', 'inventory']
     system_monitor = SystemMonitor(list_of_systems)
     
     system_monitor.heartbeat_checker.start_monitoring()

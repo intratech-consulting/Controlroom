@@ -102,11 +102,6 @@ services:
       dockerfile: Heartbeat/Dockerfile.heartbeat
     depends_on:
       - logstash
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
     networks:
       - my_shared_network
     restart: always
@@ -119,11 +114,6 @@ services:
       dockerfile: Loggin/Dockerfile.loggin
     depends_on:
       - logstash
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
     networks:
       - my_shared_network
     restart: always
