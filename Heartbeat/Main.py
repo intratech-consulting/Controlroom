@@ -7,15 +7,24 @@ from MessageProcessor import MessageProcessor
 from HeartbeatChecker import HeartbeatChecker
 import logging
 import json
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class SystemMonitor:
     def __init__(self, list_of_systems):
-        self.connection_manager = ConnectionManager("rabbitmq", 5672, "user", "password")
+        rabbitmq_host = os.getenv("RABBITMQ_HOST")
+        rabbitmq_port = int(os.getenv("RABBITMQ_PORT"))
+        rabbitmq_user = os.getenv("RABBITMQ_USER")
+        rabbitmq_password = os.getenv("RABBITMQ_PASSWORD")
+        
+        self.connection_manager = ConnectionManager(rabbitmq_host, rabbitmq_port, rabbitmq_user, rabbitmq_password)
         self.message_processor = MessageProcessor()
-        self.heartbeat_checker = HeartbeatChecker(list_of_systems, self)
         self.heartbeat_checker = HeartbeatChecker(list_of_systems, self)
 
     def send_to_logstash(self, system_data):
@@ -30,24 +39,24 @@ class SystemMonitor:
             logging.error(f"Error sending data to Logstash: {e}\nData: {system_data}", exc_info=True)
 
     def handle_message(self, ch, method, properties, body):
-            system_data = self.message_processor.process_message(body)
-            current_time = time.time()  # Record the time the message was processed
-            formatted_time = datetime.utcfromtimestamp(current_time).isoformat() + 'Z'
+        system_data = self.message_processor.process_message(body)
+        current_time = time.time()  # Record the time the message was processed
+        formatted_time = datetime.utcfromtimestamp(current_time).isoformat() + 'Z'
 
-            need_send, is_active, interval = self.heartbeat_checker.check_system_active(system_data["SystemName"], current_time)
+        need_send, is_active, interval = self.heartbeat_checker.check_system_active(system_data["SystemName"], current_time)
 
-            if need_send:
-                json_data = {
+        if need_send:
+            json_data = {
                 "Timestamp": formatted_time,
                 "SystemName": system_data["SystemName"],
                 "Status": "Active" if is_active else "Down",
                 "Heartbeat-Interval": interval
-                }   
-                try:
-                    logging.info(f"Processed message: {json_data}")
-                    self.send_to_logstash(json_data)
-                except Exception as e:
-                    logging.error(f"Error handling message: {e}", exc_info=True)
+            }
+            try:
+                logging.info(f"Processed message: {json_data}")
+                self.send_to_logstash(json_data)
+            except Exception as e:
+                logging.error(f"Error handling message: {e}", exc_info=True)
 
     def consume_heartbeat_messages(self):
         connection = self.connection_manager.create_connection()
