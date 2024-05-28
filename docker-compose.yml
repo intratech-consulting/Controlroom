@@ -33,6 +33,11 @@ services:
     volumes:
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
       - elasticsearch:/usr/share/elasticsearch/data:Z
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     ports:
       - 9200:9200
       - 9300:9300
@@ -58,6 +63,11 @@ services:
     volumes:
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,Z
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro,Z
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     ports:
       - 5044:5044
       - 50000:50000/tcp
@@ -81,6 +91,11 @@ services:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     volumes:
       - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro,Z
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     ports:
       - 5601:5601
     environment:
@@ -97,6 +112,11 @@ services:
       dockerfile: Consumer/Dockerfile.consumer
     depends_on:
       - logstash
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - my_shared_network
     restart: always
@@ -109,6 +129,11 @@ services:
       dockerfile: Loggin/Dockerfile.loggin
     depends_on:
       - logstash
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - my_shared_network
     restart: always
