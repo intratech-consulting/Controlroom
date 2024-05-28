@@ -36,7 +36,7 @@ jobs:
       - name: Check if latest images exist
         id: check_latest_images
         run: |
-          declare -a images=("controlroom-kibana:latest" "controlroom-elasticsearch:latest" "controlroom-logstash:latest" "controlroom-consumer:latest")
+          declare -a images=("controlroom-kibana:latest" "controlroom-elasticsearch:latest" "controlroom-logstash:latest" "controlroom-heartbeat:latest")
           for image in "${images[@]}"; do
             image_key=$(echo "${image}" | sed 's/[^[:alnum:]]/_/g')  # Sanitize the image name for use as a key
             if docker image inspect "$image" &> /dev/null; then
@@ -65,7 +65,7 @@ jobs:
           backup_image controlroom-kibana latest kibana-backup
           backup_image controlroom-elasticsearch latest elasticsearch-backup
           backup_image controlroom-logstash latest logstash-backup
-          backup_image controlroom-consumer latest consumer-backup"
+          backup_image controlroom-heartbeat latest heartbeat-backup"
 
 
 
@@ -94,7 +94,7 @@ jobs:
           deploy_image 'controlroom-kibana' 'latest' '~/TestServer/Controlroom/kibana' \"${{ steps.check_latest_images.outputs.kibana_exists }}\"
           deploy_image 'controlroom-elasticsearch' 'latest' '~/TestServer/Controlroom/elasticsearch' \"${{ steps.check_latest_images.outputs.elasticsearch_exists }}\"
           deploy_image 'controlroom-logstash' 'latest' '~/TestServer/Controlroom/logstash' \"${{ steps.check_latest_images.outputs.logstash_exists }}\"
-          deploy_image 'controlroom-consumer' 'latest' '~/TestServer/Controlroom' \"${{ steps.check_latest_images.outputs.consumer_exists }}\""
+          deploy_image 'controlroom-heartbeat' 'latest' '~/TestServer/Controlroom' \"${{ steps.check_latest_images.outputs.heartbeat_exists }}\""
 
 
         
@@ -110,7 +110,7 @@ jobs:
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
           ssh -i ~/.ssh/deployment.key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'ENDSSH'
           echo "Checking deployment status..."
-          services=("controlroom-consumer-1" "controlroom-logstash-1" "controlroom-kibana-1" "controlroom-elasticsearch-1")
+          services=("controlroom-heartbeat-1" "controlroom-logstash-1" "controlroom-kibana-1" "controlroom-elasticsearch-1")
           all_good=true
 
           for service in "${services[@]}"; do
@@ -156,7 +156,7 @@ jobs:
             sed -i "s/$service:$backup_tag/$service:latest/g" docker-compose.yml
           }
 
-          rollback_service "controlroom-consumer" "backup"
+          rollback_service "controlroom-heartbeat" "backup"
           rollback_service "controlroom-logstash" "backup"
           rollback_service "controlroom-kibana" "backup"
           rollback_service "controlroom-elasticsearch" "backup"

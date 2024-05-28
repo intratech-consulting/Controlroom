@@ -2,7 +2,7 @@ import logging
 from RabbitMQConsumer import RabbitMQConsumer
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
     consumer = RabbitMQConsumer('Loggin_queue')
